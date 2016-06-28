@@ -63,9 +63,8 @@ public class StringKafkaMessage extends AbstractKafkaMessage {
         this.payload = payload;
     }
 
-    @Override
     public JsonObject toJson() {
-        final JsonObject jsonObject = super.toJson();
+        final JsonObject jsonObject = super.asJson();
         if (getPayload() != null) {
             jsonObject.put(PAYLOAD, getPayload());
         }

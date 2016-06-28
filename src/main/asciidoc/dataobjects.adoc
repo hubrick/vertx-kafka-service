@@ -1,21 +1,5 @@
 = Cheatsheets
 
-[[StringKafkaMessage]]
-== StringKafkaMessage
-
-++++
- @author Emir Dizdarevic
-++++
-'''
-
-[cols=">25%,^25%,50%"]
-[frame="topbot"]
-|===
-^|Name | Type ^| Description
-|[[partKey]]`partKey`|`String`|-
-|[[payload]]`payload`|`String`|-
-|===
-
 [[ByteKafkaMessage]]
 == ByteKafkaMessage
 
@@ -45,5 +29,21 @@
 |===
 ^|Name | Type ^| Description
 |[[topic]]`topic`|`String`|-
+|===
+
+[[StringKafkaMessage]]
+== StringKafkaMessage
+
+++++
+ @author Emir Dizdarevic
+++++
+'''
+
+[cols=">25%,^25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[partKey]]`partKey`|`String`|-
+|[[payload]]`payload`|`String`|-
 |===
 

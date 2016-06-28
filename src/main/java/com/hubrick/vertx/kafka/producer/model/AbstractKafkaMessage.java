@@ -17,8 +17,6 @@ package com.hubrick.vertx.kafka.producer.model;
 
 import io.vertx.core.json.JsonObject;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 /**
  * @author Emir Dizdarevic
  * @since 1.0.0
@@ -44,7 +42,7 @@ public abstract class AbstractKafkaMessage {
         this.partKey = partKey;
     }
 
-    public JsonObject toJson() {
+    public JsonObject asJson() {
         final JsonObject jsonObject = new JsonObject();
         if(partKey != null) {
             jsonObject.put(PART_KEY, partKey);
