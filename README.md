@@ -1,4 +1,14 @@
 # Vert.x Kafka Service
+
+## Compatibility
+- Java 8+
+- Vert.x 3.1.0 >=
+
+ Vert.x version     | Library version
+ ------------------ | ----------------
+ 3.1.0              | 1.0.0
+ 3.3.0              | 1.1.0
+
 ## Vert.x Kafka Consumer
 This service allows you to bridge messages from Kafka to the Vert.x Event Bus. It allows asynchronous message processing while still maintaining a correct Kafka offset.
 
@@ -15,10 +25,6 @@ Commit cycles will happen on any of the following conditions:
 ## Vert.x Kafka Producer
 This service allows to receive events published by other Vert.x verticles and send those events to Kafka broker.
 
-## Compatibility
-- Java 8+
-- Vert.x 3.1.0 >=
-
 ## Dependencies
 
 ### Maven
@@ -26,7 +32,7 @@ This service allows to receive events published by other Vert.x verticles and se
 <dependency>
     <groupId>com.hubrick.vertx</groupId>
     <artifactId>vertx-kafka-service</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
