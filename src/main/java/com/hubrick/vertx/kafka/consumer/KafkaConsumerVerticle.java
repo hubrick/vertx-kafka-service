@@ -65,7 +65,7 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
     private String getMandatoryStringConfig(final JsonObject jsonObject, final String key) {
         final String value = jsonObject.getString(key);
         if (Strings.isNullOrEmpty(value)) {
-            throw new IllegalArgumentException("No configuration for key " + key + "found");
+            throw new IllegalArgumentException("No configuration for key " + key + " found");
         }
         return value;
     }

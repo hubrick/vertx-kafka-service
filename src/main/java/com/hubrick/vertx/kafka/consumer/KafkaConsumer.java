@@ -53,7 +53,11 @@ class KafkaConsumer {
 
     private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumer.class);
 
-    private final static ThreadFactory FACTORY = new ThreadFactoryBuilder().setNameFormat("kafka-consumer-thread-%d").setDaemon(true).build();
+    private final static ThreadFactory FACTORY = new ThreadFactoryBuilder()
+                                                    .setNameFormat("kafka-consumer-thread-%d")
+                                                    .setUncaughtExceptionHandler((thread, throwable) -> LOG.error("Uncaught exception in thread {}", thread.getName(), throwable))
+                                                    .setDaemon(true)
+                                                    .build();
 
     private final Vertx vertx;
     private final ConsumerConnector connector;
