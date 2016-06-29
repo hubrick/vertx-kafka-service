@@ -25,7 +25,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import kafka.common.FailedToSendMessageException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

@@ -1,0 +1,2 @@
+FROM wurstmeister/zookeeper:latest
+

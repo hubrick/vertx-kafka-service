@@ -1,0 +1,6 @@
+ports:
+  - 2181
+
+healthChecks:
+  logPatterns:
+    - pattern: binding to port

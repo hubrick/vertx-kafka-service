@@ -52,16 +52,17 @@
         <slf4j.version>1.7.13</slf4j.version>
 
         <!--Plugin versions-->
-        <maven.compiler.plugin.version>3.1</maven.compiler.plugin.version>
-        <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
-        <maven.clean.plugin.version>2.5</maven.clean.plugin.version>
-        <maven.vertx.plugin.version>2.0.11-final</maven.vertx.plugin.version>
-        <maven.surefire.plugin.version>2.14</maven.surefire.plugin.version>
-        <maven.failsafe.plugin.version>2.14</maven.failsafe.plugin.version>
-        <maven.surefire.report.plugin.version>2.14</maven.surefire.report.plugin.version>
-        <maven.dependency.plugin.version>2.7</maven.dependency.plugin.version>
-        <maven.source.plugin.version>2.1.2</maven.source.plugin.version>
-        <maven.javadoc.plugin.version>2.9</maven.javadoc.plugin.version>
+        <compiler-maven-plugin.version>3.1</compiler-maven-plugin.version>
+        <resources-maven-plugin.version>2.6</resources-maven-plugin.version>
+        <clean-maven-plugin.version>2.5</clean-maven-plugin.version>
+        <surefire-maven-plugin.version>2.14</surefire-maven-plugin.version>
+        <failsafe-maven-plugin.version>2.14</failsafe-maven-plugin.version>
+        <surefire-report-maven-plugin.version>2.14</surefire-report-maven-plugin.version>
+        <dependency-maven-plugin.version>2.7</dependency-maven-plugin.version>
+        <source-maven-plugin.version>2.1.2</source-maven-plugin.version>
+        <javadoc-maven-plugin.version>2.9</javadoc-maven-plugin.version>
+        <docker-maven-plugin.version>2.11.13</docker-maven-plugin.version>
+
     </properties>
 
 
@@ -165,7 +166,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>${maven.source.plugin.version}</version>
+                <version>${source-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -178,7 +179,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven.javadoc.plugin.version}</version>
+                <version>${javadoc-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -191,7 +192,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven.compiler.plugin.version}</version>
+                <version>${compiler-maven-plugin.version}</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
@@ -213,7 +214,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.plugin.version}</version>
+                <version>${surefire-maven-plugin.version}</version>
                 <configuration>
                     <excludes>
                         <exclude>**/*IntegrationTest.java</exclude>
@@ -224,7 +225,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>${maven.failsafe.plugin.version}</version>
+                <version>${failsafe-maven-plugin.version}</version>
                 <configuration>
                     <includes>
                         <include>**/*IntegrationTest.java</include>
@@ -262,6 +263,41 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.alexecollins.docker</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>${docker-maven-plugin.version}</version>
+                <configuration>
+                    <removeIntermediateImages>true</removeIntermediateImages>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>package</id>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>start</id>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop</id>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.alexecollins.docker</groupId>
+                        <artifactId>docker-java-orchestration-plugin-boot2docker</artifactId>
+                        <version>${docker-maven-plugin.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
