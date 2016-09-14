@@ -17,6 +17,7 @@ package com.hubrick.vertx.kafka.producer;
 
 import com.google.common.base.Strings;
 import com.hubrick.vertx.kafka.producer.config.KafkaProducerConfiguration;
+import com.hubrick.vertx.kafka.producer.config.ProducerType;
 import com.hubrick.vertx.kafka.producer.config.StatsDConfiguration;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.json.JsonObject;
@@ -58,7 +59,6 @@ public class KafkaProducerServiceVerticle extends AbstractVerticle {
             throw new IllegalStateException("topic must be specified in config");
         }
 
-
         final JsonObject statsDConfig = config().getJsonObject(STATSD);
 
         StatsDConfiguration statsDConfiguration = null;
@@ -75,6 +75,41 @@ public class KafkaProducerServiceVerticle extends AbstractVerticle {
                 config().getInteger(REQUEST_ACKS, REQUEST_ACKS_DEFAULT)
         );
         kafkaProducerConfiguration.setStatsDConfiguration(statsDConfiguration);
+
+        final String type = config().getString(TYPE);
+        if(!Strings.isNullOrEmpty(type)) {
+            kafkaProducerConfiguration.setType(ProducerType.valueOf(type));
+        }
+
+        final Integer maxRetries = config().getInteger(MAX_RETRIES);
+        if(maxRetries != null) {
+            kafkaProducerConfiguration.setMaxRetries(maxRetries);
+        }
+
+        final Integer retryBackoffMs = config().getInteger(RETRY_BACKOFF_MS);
+        if(retryBackoffMs != null) {
+            kafkaProducerConfiguration.setRetryBackoffMs(retryBackoffMs);
+        }
+
+        final Integer bufferingMaxMs = config().getInteger(BUFFERING_MAX_MS);
+        if(bufferingMaxMs != null) {
+            kafkaProducerConfiguration.setBufferingMaxMs(bufferingMaxMs);
+        }
+
+        final Integer bufferingMaxMessages = config().getInteger(BUFFERING_MAX_MESSAGES);
+        if(bufferingMaxMessages != null) {
+            kafkaProducerConfiguration.setBufferingMaxMessages(bufferingMaxMessages);
+        }
+
+        final Integer enqueueTimeout = config().getInteger(ENQUEUE_TIMEOUT);
+        if(enqueueTimeout != null) {
+            kafkaProducerConfiguration.setEnqueueTimeout(enqueueTimeout);
+        }
+
+        final Integer batchMessageNum = config().getInteger(BATCH_MESSAGE_NUM);
+        if(batchMessageNum != null) {
+            kafkaProducerConfiguration.setBatchMessageNum(batchMessageNum);
+        }
 
         kafkaProducerService = new DefaultKafkaProducerService(kafkaProducerConfiguration);
         ProxyHelper.registerService(KafkaProducerService.class, vertx, kafkaProducerService, address);

@@ -32,7 +32,7 @@ This service allows to receive events published by other Vert.x verticles and se
 <dependency>
     <groupId>com.hubrick.vertx</groupId>
     <artifactId>vertx-kafka-service</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -92,6 +92,13 @@ Service id: com.hubrick.services.kafka-producer
       "defaultTopic" : "default-topic", 
       "brokerList" : "localhost:9092",          
       "requiredAcks" : 1,
+      "type" : "async",
+      "maxRetries" : 3,
+      "retryBackoffMs" : 100,
+      "bufferingMaxMs" : 5000,
+      "bufferingMaxMessages" : 10000,
+      "enqueueTimeout" : -1,
+      "batchMessageNum" : 200,
       "statsD" : {
         "prefix" : "vertx.kafka",                
         "host" : "localhost",                   
@@ -104,6 +111,13 @@ Service id: com.hubrick.services.kafka-producer
 * `defaultTopic`: Topic used if no other specified during sending (Required)
 * `brokerList`: The Kafka broker list (Default: localhost:9092)
 * `requiredAcks`: The minimum number of required acks to acknowledge the sending (Default: 1)
+* `type`: This parameter specifies whether the messages are sent asynchronously in a background thread (Default: sync)
+* `maxRetries`: This property will cause the producer to automatically retry a failed send request. This property specifies the number of retries when such failures occur (Default: 3)
+* `retryBackoffMs`: Time to wait before each retry (Default: 100)
+* `bufferingMaxMs`: Maximum time to buffer data when using async mode. (Default: 5000)
+* `bufferingMaxMessages`: The maximum number of unsent messages that can be queued up the producer when using async mode before either the producer must be blocked or data must be dropped (Default: 10000)
+* `enqueueTimeout`: The amount of time to block before dropping messages when running in async mode and the buffer has reached bufferingMaxMessages (Default: -1)
+* `batchMessageNum`: The number of messages to send in one batch when using async mode (Default: 200)
 * `statsD.prefix`: statsD prefix (Default: vertx.kafka)
 * `statsD.host`: statsD host (Default: localhost)
 * `statsD.port`: statsD port (Default: 8125)

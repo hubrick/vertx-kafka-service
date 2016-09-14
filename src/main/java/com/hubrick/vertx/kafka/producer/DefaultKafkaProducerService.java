@@ -119,6 +119,13 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
     private Producer getOrCreateProducer(MessageSerializerType messageSerializerType) {
         if (producers.get(messageSerializerType) == null) {
             final Properties props = new Properties();
+            props.put("producer.type", kafkaProducerConfiguration.getType().getValue());
+            props.put("message.send.max.retries", kafkaProducerConfiguration.getMaxRetries().toString());
+            props.put("retry.backoff.ms", kafkaProducerConfiguration.getRetryBackoffMs().toString());
+            props.put("queue.buffering.max.ms", kafkaProducerConfiguration.getBufferingMaxMs().toString());
+            props.put("queue.buffering.max.messages", kafkaProducerConfiguration.getBufferingMaxMessages().toString());
+            props.put("queue.enqueue.timeout.ms", kafkaProducerConfiguration.getEnqueueTimeout().toString());
+            props.put("batch.num.messages", kafkaProducerConfiguration.getBatchMessageNum().toString());
             props.put("metadata.broker.list", kafkaProducerConfiguration.getBrokerList());
             props.put("serializer.class", messageSerializerType.getValue());
             props.put("request.required.acks", String.valueOf(kafkaProducerConfiguration.getRequestAcks()));
