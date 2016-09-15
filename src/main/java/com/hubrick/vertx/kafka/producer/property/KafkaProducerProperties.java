@@ -28,6 +28,13 @@ public final class KafkaProducerProperties {
     public static final String BROKER_LIST = "brokerList";
     public static final String REQUEST_ACKS = "requiredAcks";
     public static final String DEFAULT_TOPIC = "defaultTopic";
+    public static final String TYPE = "type";
+    public static final String MAX_RETRIES = "maxRetries";
+    public static final String RETRY_BACKOFF_MS = "retryBackoffMs";
+    public static final String BUFFERING_MAX_MS = "bufferingMaxMs";
+    public static final String BUFFERING_MAX_MESSAGES = "bufferingMaxMessages";
+    public static final String ENQUEUE_TIMEOUT = "enqueueTimeout";
+    public static final String BATCH_MESSAGE_NUM = "batchMessageNum";
     public static final String STATSD = "statsD";
 
     public static final String BROKER_LIST_DEFAULT = "localhost:9092";
