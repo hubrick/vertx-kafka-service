@@ -15,25 +15,21 @@
  */
 package com.hubrick.vertx.kafka.consumer;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaStream;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.message.MessageAndMetadata;
-import kafka.serializer.StringDecoder;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,9 +45,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Marcus Thiesen
  * @since 1.0.0
  */
-class KafkaConsumer {
+class KafkaConsumerManager {
 
-    private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumer.class);
+    private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumerManager.class);
 
     private final static ThreadFactory FACTORY = new ThreadFactoryBuilder()
                                                     .setNameFormat("kafka-consumer-thread-%d")
@@ -60,7 +56,7 @@ class KafkaConsumer {
                                                     .build();
 
     private final Vertx vertx;
-    private final ConsumerConnector connector;
+    private final KafkaConsumer<String,String> consumer;
     private final KafkaConsumerConfiguration configuration;
     private final KafkaConsumerHandler handler;
     private final Set<Long> unacknowledgedOffsets = Collections.newSetFromMap(new ConcurrentHashMap<Long, Boolean>());
@@ -76,72 +72,72 @@ class KafkaConsumer {
     private final AtomicLong currentPartition = new AtomicLong(-1);
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
 
-    public KafkaConsumer(Vertx vertx, ConsumerConnector connector, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
+    public KafkaConsumerManager(Vertx vertx, KafkaConsumer<String,String> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
         this.vertx = vertx;
-        this.connector = connector;
+        this.consumer = consumer;
         this.configuration = configuration;
         this.handler = handler;
     }
 
-    public static KafkaConsumer create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler handler) {
+    public static KafkaConsumerManager create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler handler) {
         final Properties properties = createProperties(configuration);
-        final ConsumerConfig config = new ConsumerConfig(properties);
-        final ConsumerConnector connector = Consumer.createJavaConsumerConnector(config);
-        return new KafkaConsumer(vertx, connector, configuration, handler);
+        final KafkaConsumer consumer = new KafkaConsumer(properties, new StringDeserializer(), new StringDeserializer());
+        return new KafkaConsumerManager(vertx, consumer, configuration, handler);
     }
 
     protected static Properties createProperties(KafkaConsumerConfiguration configuration) {
         final Properties properties = new Properties();
 
-        properties.setProperty("zookeeper.connect", configuration.getZookeeper());
-        properties.setProperty("group.id", configuration.getGroupId());
-        properties.setProperty("zookeeper.connection.timeout.ms", Integer.toString(configuration.getZookeeperTimeout()));
-        properties.setProperty("auto.commit.enable", Boolean.FALSE.toString());
-        properties.setProperty("auto.offset.reset", configuration.getOffsetReset());
-        properties.setProperty("queued.max.message.chunks", "1000");
+        properties.setProperty(ConsumerConfig.CLIENT_ID_CONFIG, configuration.getClientId());
+        properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
+        properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, configuration.getGroupId());
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Boolean.FALSE.toString());
+        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configuration.getOffsetReset());
 
         return properties;
     }
 
     public void stop() {
         messageProcessorExececutor.shutdownNow();
-        connector.shutdown();
+        consumer.unsubscribe();
+        consumer.close();
     }
 
     public void start() {
         final String kafkaTopic = configuration.getKafkaTopic();
-        final Map<String, List<KafkaStream<String, String>>> messageStreams = connector.createMessageStreams(ImmutableMap.of(kafkaTopic, 1),
-                new StringDecoder(null),
-                new StringDecoder(null));
-        final List<KafkaStream<String, String>> topicStreams = messageStreams.get(kafkaTopic);
-        final KafkaStream<String, String> topicStream = Iterables.getOnlyElement(topicStreams);
+        consumer.subscribe(Collections.singletonList(kafkaTopic));
 
-        messageProcessorExececutor.submit(() -> read(topicStream));
+        messageProcessorExececutor.submit(() -> read());
     }
 
-    private void read(final KafkaStream<String, String> stream) {
-        while (stream.iterator().hasNext()) {
-            final int phase = phaser.register();
+    private void read() {
+        while (!consumer.subscription().isEmpty()) {
+            final ConsumerRecords<String, String> records = consumer.poll(60000);
+            final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
+            while (iterator.hasNext()) {
 
-            final MessageAndMetadata<String, String> msg = stream.iterator().next();
-            final long offset = msg.offset();
-            final long partition = msg.partition();
-            unacknowledgedOffsets.add(offset);
-            lastCommittedOffset.compareAndSet(0, offset);
-            currentPartition.compareAndSet(-1, partition);
+                final int phase = phaser.register();
 
-            handle(msg.message(), offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
+                final ConsumerRecord<String, String> msg = iterator.next();
+                final long offset = msg.offset();
+                final long partition = msg.partition();
+                unacknowledgedOffsets.add(offset);
+                lastCommittedOffset.compareAndSet(0, offset);
+                currentPartition.compareAndSet(-1, partition);
 
-            if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
-                    || partititionChanged(partition)
-                    || tooManyUncommittedOffsets(offset)
-                    || commitTimeoutReached()) {
-                LOG.info("Got {} unacknowledged messages, waiting for ACKs in order to commit", unacknowledgedOffsets.size());
-                if (!waitForAcks(phase)) {
-                    return;
+                handle(msg.value(), offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
+
+                if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
+                        || partititionChanged(partition)
+                        || tooManyUncommittedOffsets(offset)
+                        || commitTimeoutReached()) {
+                    LOG.info("Got {} unacknowledged messages, waiting for ACKs in order to commit", unacknowledgedOffsets.size());
+                    if (!waitForAcks(phase)) {
+                        return;
+                    }
+                    commitOffsetsIfAllAcknowledged(offset);
+                    LOG.info("Continuing message processing");
                 }
-                commitOffsetsIfAllAcknowledged(offset);
-                LOG.info("Continuing message processing");
             }
         }
     }
@@ -211,7 +207,7 @@ class KafkaConsumer {
     private void commitOffsetsIfAllAcknowledged(final long currentOffset) {
         if (unacknowledgedOffsets.isEmpty()) {
             LOG.info("Committing at offset {}", currentOffset);
-            connector.commitOffsets();
+            consumer.commitSync();
             lastCommittedOffset.set(currentOffset);
             lastCommitTime.set(System.currentTimeMillis());
         } else {

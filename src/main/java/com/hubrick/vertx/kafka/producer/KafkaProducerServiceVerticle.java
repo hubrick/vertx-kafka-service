@@ -24,11 +24,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.serviceproxy.ProxyHelper;
 
 import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.*;
-import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.BROKER_LIST;
-import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.BROKER_LIST_DEFAULT;
-import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.DEFAULT_TOPIC;
-import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.REQUEST_ACKS;
-import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.REQUEST_ACKS_DEFAULT;
 import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.STATSD;
 import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.HOST_DEFAULT;
 import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.PORT_DEFAULT;
@@ -71,9 +66,11 @@ public class KafkaProducerServiceVerticle extends AbstractVerticle {
 
         final KafkaProducerConfiguration kafkaProducerConfiguration = new KafkaProducerConfiguration(
                 topic,
-                config().getString(BROKER_LIST, BROKER_LIST_DEFAULT),
-                config().getInteger(REQUEST_ACKS, REQUEST_ACKS_DEFAULT)
-        );
+                config().getString(BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_DEFAULT),
+                config().getString(ACKS, ACKS_DEFAULT),
+                config().getInteger(RETRIES, RETRIES_DEFAULT),
+                config().getInteger(REQUEST_TIMEOUT_MS, REQUEST_TIMEOUT_MS_DEFAULT),
+                config().getInteger(MAX_BLOCK_MS, MAX_BLOCK_MS_DEFAULT));
         kafkaProducerConfiguration.setStatsDConfiguration(statsDConfiguration);
 
         final String type = config().getString(TYPE);

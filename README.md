@@ -4,10 +4,12 @@
 - Java 8+
 - Vert.x 3.1.0 >=
 
- Vert.x version     | Library version
- ------------------ | ----------------
- 3.1.0              | 1.0.0
- 3.3.0              | 1.1.0
+ Vert.x version     | Kafka Version     | Library version
+ ------------------ | ----------------- | ----------------
+ 3.1.0              | 0.8.x             | 1.0.0
+ 3.3.0              | 0.8.x             | 1.1.0
+ 3.3.3              | 0.10.1            | 1.2.0
+  
 
 ## Vert.x Kafka Consumer
 This service allows you to bridge messages from Kafka to the Vert.x Event Bus. It allows asynchronous message processing while still maintaining a correct Kafka offset.
@@ -21,6 +23,7 @@ Commit cycles will happen on any of the following conditions:
  * `maxUnacknowledged` is reached, meaning that this amount of messages is currently unacknowledged by the Vert.x handlers.
  * `maxUncommited` is reached, meaning that the difference between the last offset that was committed and the current offset is `maxUncommited`
  * The Kafka partition from which the consumer consumes is switched. In order to reduce the amount of commit cycles caused by this condition one should start a consumer per partition.
+ * `commitTimeoutMs` is reached, meaning the time between the last and the current message was bigger than last commit timeout in milliseconds. 
  
 ## Vert.x Kafka Producer
 This service allows to receive events published by other Vert.x verticles and send those events to Kafka broker.
@@ -46,13 +49,15 @@ Service id: com.hubrick.services.kafka-consumer
 ```JSON
     {
       "address" : "message-from-kafka",
+      "clientId" : "clientId", 
       "groupId" : "groupId",
       "kafkaTopic" : "kafka-topic",
-      "zk" : "host:port",
+      "bootstrapServers" : "kafka-server:9092",
       "offsetReset" : "largest",
       "maxUnacknowledged" : 100,
       "maxUncommitted" : 1000,
       "ackTimeoutSeconds" : 600,
+      "commitTimeoutMs" : 300000, 
       "maxRetries" : 100,
       "initialRetryDelaySeconds" : 1,
       "maxRetryDelaySeconds" : 10,
@@ -60,14 +65,16 @@ Service id: com.hubrick.services.kafka-consumer
     }
 ```
 
-* `address`: Vert.x event bus address the Kafka messages are relayed to (Required)
-* `groupId`: Kafka Group Id to use for the Kafka consumer (Required)
-* `kafkaTopic`: The Kafka topic to subscribe to (Required)
-* `zk`: Zookeeper host and port (Required)
+* `address`: Vert.x event bus address the Kafka messages are relayed to (required)
+* `clientId`: Kafka client id to use for the Kafka consumer (required)
+* `groupId`: Kafka Group Id to use for the Kafka consumer (required)
+* `kafkaTopic`: The Kafka topic to subscribe to (required)
+* `bootstrapServers`: Kafka servers host and port to connect to (required)
 * `offsetReset`: What to do when there is no initial offset in ZooKeeper or if an offset is out of range (Default: largest)
 * `maxUnacknowledged`: how many messages from Kafka can be unacknowledged before the module waits for all missing acknowledgements, effectively limiting the amount of messages that are on the Vertx Event Bus at any given time. (Default: 100)
 * `maxUncommitted`: max offset difference before a commit cycle is run. A commit cycle waits for all unacknowledged messages and then commits the offset to Kafka. Note that when you read from multiple partitions the offset is not continuous and therefore every partition switch causes a commit cycle. For better performance you should start an instance of the module per partition. (Default: 1000)
 * `ackTimeoutSeconds`: the time to wait for all outstanding acknowledgements during a commit cycle. This will just lead to a log message saying how many ACKs are still missing, as the module will wait forever for ACKs in order to achieve at least once semantics. (Default: 600)
+* `commitTimeoutMs`: the time to wait to force a commit cycle in case there is not a lot of traffic on your topic. It will check if between and the last message the timeout has been passed and will commit if so. 
 * `maxRetries`: Max number of retries until it consider the message failed (Default: infinite)
 * `initialRetryDelaySeconds`: Initial retry delay (Default: 1)
 * `maxRetryDelaySeconds`: Max retry delay since the retry delay is increasing (Default: 10)
@@ -90,8 +97,8 @@ Service id: com.hubrick.services.kafka-producer
     {
       "address" : "eventbus-address",        
       "defaultTopic" : "default-topic", 
-      "brokerList" : "localhost:9092",          
-      "requiredAcks" : 1,
+      "bootstrapServers" : "kafka-server:9092",          
+      "acks" : 1,
       "type" : "async",
       "maxRetries" : 3,
       "retryBackoffMs" : 100,
@@ -109,8 +116,8 @@ Service id: com.hubrick.services.kafka-producer
 
 * `address`: Vert.x event bus address (Required)
 * `defaultTopic`: Topic used if no other specified during sending (Required)
-* `brokerList`: The Kafka broker list (Default: localhost:9092)
-* `requiredAcks`: The minimum number of required acks to acknowledge the sending (Default: 1)
+* `bootstrapServers`: The Kafka broker list (Default: localhost:9092)
+* `acks`: The minimum number of required acks to acknowledge the sending (Default: 1)
 * `type`: This parameter specifies whether the messages are sent asynchronously in a background thread (Default: sync)
 * `maxRetries`: This property will cause the producer to automatically retry a failed send request. This property specifies the number of retries when such failures occur (Default: 3)
 * `retryBackoffMs`: Time to wait before each retry (Default: 100)

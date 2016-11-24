@@ -27,11 +27,11 @@ public final class KafkaConsumerProperties {
 
     public static final String KEY_VERTX_ADDRESS = "address";
 
+    public static final String KEY_CLIENT_ID = "clientId";
     public static final String KEY_GROUP_ID = "groupId";
     public static final String KEY_KAFKA_TOPIC = "kafkaTopic";
-    public static final String KEY_ZOOKEEPER = "zk";
+    public static final String KEY_BOOTSTRAP_SERVERS = "bootstrapServers";
     public static final String KEY_OFFSET_RESET = "offsetReset";
-    public static final String KEY_ZOOKEPER_TIMEOUT_MS = "zookeperTimeout";
     public static final String KEY_MAX_UNACKNOWLEDGED = "maxUnacknowledged";
     public static final String KEY_MAX_UNCOMMITTED_OFFSETS = "maxUncommitted";
     public static final String KEY_ACK_TIMEOUT_SECONDS = "ackTimeoutSeconds";

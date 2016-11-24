@@ -15,10 +15,12 @@
  */
 package com.hubrick.vertx.kafka.producer;
 
+import com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
+import kafka.Kafka;
 import org.junit.After;
 import org.junit.Before;
 
@@ -33,6 +35,16 @@ public abstract class AbstractVertxTest {
 
     protected static String SERVICE_NAME = "service:com.hubrick.services.kafka-producer";
     protected Vertx vertx;
+
+    static JsonObject makeDefaultConfig() {
+        JsonObject config = new JsonObject();
+        config.put(KafkaProducerProperties.BOOTSTRAP_SERVERS, KafkaProducerProperties.BOOTSTRAP_SERVERS_DEFAULT);
+        config.put(KafkaProducerProperties.ACKS, KafkaProducerProperties.ACKS_DEFAULT);
+        config.put(KafkaProducerProperties.MAX_BLOCK_MS, 5);
+        config.put(KafkaProducerProperties.RETRIES, 3);
+        config.put(KafkaProducerProperties.REQUEST_TIMEOUT_MS, 1000);
+        return config;
+    }
 
     @Before
     public final void init(TestContext testContext) throws Exception {

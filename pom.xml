@@ -42,14 +42,14 @@
         <arguments />
 
         <!-- Dependency Versions -->
-        <kafka.version>0.8.2.2</kafka.version>
-        <vertx.version>3.3.0</vertx.version>
-        <guava.version>18.0</guava.version>
+        <kafka.version>0.10.1.0</kafka.version>
+        <vertx.version>3.3.3</vertx.version>
+        <guava.version>20.0</guava.version>
         <metrics-core.version>2.2.0</metrics-core.version>
         <metrics-graphite.version>2.2.0</metrics-graphite.version>
         <java-statsd-client.version>3.0.1</java-statsd-client.version>
-        <junit-toolbox.version>1.8</junit-toolbox.version>
-        <slf4j.version>1.7.13</slf4j.version>
+        <junit-toolbox.version>2.2</junit-toolbox.version>
+        <slf4j.version>1.7.21</slf4j.version>
 
         <!--Plugin versions-->
         <maven.compiler.plugin.version>3.1</maven.compiler.plugin.version>
@@ -105,7 +105,7 @@
         <!-- Other dependencies -->
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.10</artifactId>
+            <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
         </dependency>
         <dependency>
@@ -146,6 +146,19 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka_2.10</artifactId>
+            <version>${kafka.version}</version>
+            <classifier>test</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.10</artifactId>
+            <version>${kafka.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
             <classifier>test</classifier>
             <scope>test</scope>

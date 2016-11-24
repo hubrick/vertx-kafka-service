@@ -24,7 +24,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import kafka.common.FailedToSendMessageException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -40,11 +39,9 @@ public class StringSerializerIntegrationTest extends AbstractVertxTest {
 
     @Test
     public void test(TestContext testContext) throws Exception {
-        JsonObject config = new JsonObject();
+        JsonObject config = makeDefaultConfig();
         config.put(KafkaProducerProperties.ADDRESS, ADDRESS);
-        config.put(KafkaProducerProperties.BROKER_LIST, KafkaProducerProperties.BROKER_LIST_DEFAULT);
         config.put(KafkaProducerProperties.DEFAULT_TOPIC, TOPIC);
-        config.put(KafkaProducerProperties.REQUEST_ACKS, KafkaProducerProperties.REQUEST_ACKS_DEFAULT);
 
         final DeploymentOptions deploymentOptions = new DeploymentOptions();
         deploymentOptions.setConfig(config);
@@ -55,7 +52,7 @@ public class StringSerializerIntegrationTest extends AbstractVertxTest {
             final KafkaProducerService kafkaProducerService = KafkaProducerService.createProxy(vertx, ADDRESS);
             kafkaProducerService.sendString(new StringKafkaMessage(MESSAGE), (Handler<AsyncResult<Void>>) message -> {
                 if (message.failed()) {
-                    testContext.assertTrue(message.cause().getMessage().equals("Failed to send messages after 3 tries."));
+                    testContext.assertTrue(message.cause().getMessage().equals("Failed to update metadata after 5 ms."));
                     async.complete();
                 } else {
                     testContext.fail();

@@ -19,12 +19,13 @@ package com.hubrick.vertx.kafka.producer;
 import com.hubrick.vertx.kafka.producer.config.KafkaProducerConfiguration;
 import com.hubrick.vertx.kafka.producer.model.KafkaOptions;
 import com.hubrick.vertx.kafka.producer.model.StringKafkaMessage;
+import com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties;
 import com.timgroup.statsd.StatsDClient;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,8 +61,10 @@ public class KafkaProducerServiceVerticleTest {
     private KafkaProducerConfiguration kafkaProducerConfiguration = new KafkaProducerConfiguration(
             "default-topic",
             "localhost:9092",
-            1
-    );
+            "1",
+            KafkaProducerProperties.RETRIES_DEFAULT,
+            KafkaProducerProperties.REQUEST_TIMEOUT_MS_DEFAULT,
+            KafkaProducerProperties.MAX_BLOCK_MS_DEFAULT);
 
     @Mock
     private StatsDClient statsDClient;
@@ -77,31 +80,31 @@ public class KafkaProducerServiceVerticleTest {
     @Test
     public void sendMessageToKafka() {
         kafkaMessageProducer.sendString(new StringKafkaMessage("test payload"), event1 -> {
-            verify(producer, times(1)).send(new KeyedMessage<String, String>("default-topic", null, "test payload"));
+            verify(producer, times(1)).send(new ProducerRecord("default-topic", null, "test payload"));
         });
     }
 
     @Test
     public void sendMessageToKafkaWithPartKey() {
         kafkaMessageProducer.sendString(new StringKafkaMessage("test payload", "some partition"), event1 -> {
-            verify(producer, times(1)).send(new KeyedMessage<String, String>("default-topic", "some partition", "test payload"));
+            verify(producer, times(1)).send(new ProducerRecord("default-topic", "some partition", "test payload"));
         });
     }
 
     @Test
     public void sendMessageToKafkaWithTopic() {
         kafkaMessageProducer.sendString(new StringKafkaMessage("test payload", "some partition"), new KafkaOptions().setTopic("foo-topic"), event1 -> {
-            verify(producer, times(1)).send(new KeyedMessage<String, String>("foo-topic", "some partition", "test payload"));
+            verify(producer, times(1)).send(new ProducerRecord("foo-topic", "some partition", "test payload"));
         });
     }
 
     @Test
     public void sendMessageToKafkaVerifyStatsDExecutorCalled() {
         kafkaMessageProducer.sendString(new StringKafkaMessage("test payload"), event1 -> {
-            verify(producer, times(1)).send(new KeyedMessage<String, String>("default-topic", null, "test payload"));
+            verify(producer, times(1)).send(new ProducerRecord("default-topic", null, "test payload"));
+            verify(statsDClient, times(1)).recordExecutionTime(anyString(), anyLong());
         });
 
-        verify(statsDClient, times(1)).recordExecutionTime(anyString(), anyLong());
     }
 
 }

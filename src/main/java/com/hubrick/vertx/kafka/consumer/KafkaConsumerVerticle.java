@@ -31,7 +31,7 @@ import io.vertx.core.json.JsonObject;
  */
 public class KafkaConsumerVerticle extends AbstractVerticle {
 
-    private KafkaConsumer consumer;
+    private KafkaConsumerManager consumer;
     private KafkaConsumerConfiguration configuration;
     private String vertxAddress;
 
@@ -44,10 +44,10 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
 
         configuration = KafkaConsumerConfiguration.create(
                 getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID),
+                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_CLIENT_ID),
                 getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC),
-                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_ZOOKEEPER),
-                config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "largest"),
-                config.getInteger(KafkaConsumerProperties.KEY_ZOOKEPER_TIMEOUT_MS, 100000),
+                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_BOOTSTRAP_SERVERS),
+                config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "latest"),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_UNACKNOWLEDGED, 100),
                 config.getLong(KafkaConsumerProperties.KEY_MAX_UNCOMMITTED_OFFSETS, 1000L),
                 config.getLong(KafkaConsumerProperties.KEY_ACK_TIMEOUT_SECONDS, 600L),
@@ -58,7 +58,7 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getLong(KafkaConsumerProperties.EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT)
         );
 
-        consumer = KafkaConsumer.create(vertx, configuration, this::handler);
+        consumer = KafkaConsumerManager.create(vertx, configuration, this::handler);
         consumer.start();
     }
 

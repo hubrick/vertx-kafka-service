@@ -29,6 +29,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import kafka.admin.AdminUtils;
+import kafka.admin.RackAwareMode;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
@@ -39,13 +40,18 @@ import kafka.server.KafkaServer;
 import kafka.utils.TestUtils;
 import kafka.utils.VerifiableProperties;
 import kafka.utils.ZKStringSerializer$;
+import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
+import org.apache.kafka.common.protocol.SecurityProtocol;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import scala.Option;
 import scala.collection.JavaConversions;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +75,7 @@ public class KafkaProducerServiceIntegrationTest extends AbstractVertxTest {
     private KafkaServer kafkaServer;
     private ConsumerConnector consumer;
     private List<String> messagesReceived = new ArrayList<String>();
-    private PollingWait wait = new PollingWait().timeoutAfter(10, TimeUnit.SECONDS).pollEvery(100, TimeUnit.MILLISECONDS);
+    private PollingWait wait = new PollingWait().timeoutAfter(10, TimeUnit.MINUTES).pollEvery(100, TimeUnit.MILLISECONDS);
 
     @Before
     public void setUp() {
@@ -108,9 +114,9 @@ public class KafkaProducerServiceIntegrationTest extends AbstractVertxTest {
     public void test(TestContext testContext) throws Exception {
         JsonObject config = new JsonObject();
         config.put(KafkaProducerProperties.ADDRESS, ADDRESS);
-        config.put(KafkaProducerProperties.BROKER_LIST, KafkaProducerProperties.BROKER_LIST_DEFAULT);
+        config.put(KafkaProducerProperties.BOOTSTRAP_SERVERS, KafkaProducerProperties.BOOTSTRAP_SERVERS_DEFAULT);
         config.put(KafkaProducerProperties.DEFAULT_TOPIC, TOPIC);
-        config.put(KafkaProducerProperties.REQUEST_ACKS, KafkaProducerProperties.REQUEST_ACKS_DEFAULT);
+        config.put(KafkaProducerProperties.ACKS, KafkaProducerProperties.ACKS_DEFAULT);
 
         final DeploymentOptions deploymentOptions = new DeploymentOptions();
         deploymentOptions.setConfig(config);
@@ -143,25 +149,28 @@ public class KafkaProducerServiceIntegrationTest extends AbstractVertxTest {
     }
 
     private KafkaServer startKafkaServer() {
-        Properties props = TestUtils.createBrokerConfig(0, 9092, true);
-        props.put("zookeeper.connect", zookeeper.getConnectString());
+        Properties props = TestUtils.createBrokerConfig(0, zookeeper.getConnectString(), true, true, 9092, Option.<SecurityProtocol>empty(), Option.<File>empty(), Option.<Properties>empty(), true, false, 0, false, 0, false, 0, Option.<String>empty());
+        props.put(KafkaConfig.ZkConnectProp(), zookeeper.getConnectString());
         kafkaServer = TestUtils.createServer(new KafkaConfig(props), new kafka.utils.MockTime());
         return kafkaServer;
     }
 
-
     private void createTopic(String topic) {
-        ZkClient zkClient = new ZkClient(zookeeper.getConnectString(), 30000, 30000, ZKStringSerializer$.MODULE$);
-        AdminUtils.createTopic(zkClient, topic, 1, 1, new Properties());
+        final ZkClient zkClient = new ZkClient(zookeeper.getConnectString(), 30000, 30000, ZKStringSerializer$.MODULE$);
+        final ZkConnection connection = new ZkConnection(zookeeper.getConnectString());
+        final ZkUtils zkUtils = new ZkUtils(zkClient, connection, false);
+        AdminUtils.createTopic(zkUtils, topic, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
         TestUtils.waitUntilMetadataIsPropagated(JavaConversions.asScalaBuffer(Lists.newArrayList(kafkaServer)), topic, 0, 10000);
         zkClient.close();
     }
 
     private ConsumerConfig createConsumerConfig() {
         Properties props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
         props.put("zookeeper.connect", zookeeper.getConnectString());
         props.put("group.id", "group.test");
         props.put("serializer.class", "kafka.serializer.StringEncoder");
+        props.put("auto.offset.reset", "smallest");
         return new ConsumerConfig(props);
     }
 

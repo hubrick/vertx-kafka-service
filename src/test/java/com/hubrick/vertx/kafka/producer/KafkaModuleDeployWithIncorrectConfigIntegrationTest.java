@@ -37,10 +37,8 @@ public class KafkaModuleDeployWithIncorrectConfigIntegrationTest extends Abstrac
     // The test should fail to start the deployment
     public void sendMessage(TestContext testContext) throws Exception {
 
-        JsonObject config = new JsonObject();
-        config.put(KafkaProducerProperties.BROKER_LIST, KafkaProducerProperties.BROKER_LIST_DEFAULT);
+        JsonObject config =  makeDefaultConfig();
         config.put(KafkaProducerProperties.DEFAULT_TOPIC, TOPIC);
-        config.put(KafkaProducerProperties.REQUEST_ACKS, KafkaProducerProperties.REQUEST_ACKS_DEFAULT);
 
         final Async async = testContext.async();
         final DeploymentOptions deploymentOptions = new DeploymentOptions();

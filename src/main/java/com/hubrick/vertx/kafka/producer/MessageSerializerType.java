@@ -15,14 +15,17 @@
  */
 package com.hubrick.vertx.kafka.producer;
 
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+
 /**
  * @author Emir Dizdarevic
  * @since 1.0.0
  */
 public enum MessageSerializerType {
 
-    STRING_SERIALIZER("kafka.serializer.StringEncoder"),
-    BYTE_SERIALIZER("kafka.serializer.DefaultEncoder");
+    STRING_SERIALIZER(StringSerializer.class.getName()),
+    BYTE_SERIALIZER(ByteArraySerializer.class.getName());
 
     private String value;
 
