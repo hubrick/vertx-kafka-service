@@ -31,9 +31,9 @@ public class ManualTest {
     public static void main(String[] args) {
         JsonObject config = new JsonObject();
         config.put(KafkaProducerProperties.ADDRESS, "test-address");
-        config.put(KafkaProducerProperties.BROKER_LIST, "localhost:9092");
+        config.put(KafkaProducerProperties.BOOTSTRAP_SERVERS, KafkaProducerProperties.BOOTSTRAP_SERVERS_DEFAULT);
         config.put(KafkaProducerProperties.DEFAULT_TOPIC, "test-topic");
-        config.put(KafkaProducerProperties.REQUEST_ACKS, 1);
+        config.put(KafkaProducerProperties.ACKS, KafkaProducerProperties.ACKS_DEFAULT);
 
         final Vertx vertx = Vertx.vertx();
         final DeploymentOptions deploymentOptions = new DeploymentOptions();

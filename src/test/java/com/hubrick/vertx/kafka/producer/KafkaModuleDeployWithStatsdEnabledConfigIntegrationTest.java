@@ -26,13 +26,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import kafka.common.FailedToSendMessageException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests mod-kafka module with enabled StatsD configuration. The deployment should be successfull and
@@ -52,11 +47,9 @@ public class KafkaModuleDeployWithStatsdEnabledConfigIntegrationTest extends Abs
     @Test
     // The deployment should be successfull and StatsD executor call should also be successful
     public void test(TestContext testContext) throws Exception {
-        JsonObject config = new JsonObject();
+        JsonObject config = makeDefaultConfig();
         config.put(KafkaProducerProperties.ADDRESS, ADDRESS);
-        config.put(KafkaProducerProperties.BROKER_LIST, KafkaProducerProperties.BROKER_LIST_DEFAULT);
         config.put(KafkaProducerProperties.DEFAULT_TOPIC, TOPIC);
-        config.put(KafkaProducerProperties.REQUEST_ACKS, KafkaProducerProperties.REQUEST_ACKS_DEFAULT);
 
         JsonObject statsDConfig = new JsonObject();
         statsDConfig.put(StatsDProperties.HOST, "localhost");
@@ -74,7 +67,7 @@ public class KafkaModuleDeployWithStatsdEnabledConfigIntegrationTest extends Abs
             final KafkaProducerService kafkaProducerService = KafkaProducerService.createProxy(vertx, ADDRESS);
             kafkaProducerService.sendBytes(new ByteKafkaMessage(Buffer.buffer(MESSAGE.getBytes())), (Handler<AsyncResult<Void>>) message -> {
                 if (message.failed()) {
-                    testContext.assertTrue(message.cause().getMessage().equals("Failed to send messages after 3 tries."));
+                    testContext.assertTrue(message.cause().getMessage().equals("Failed to update metadata after 5 ms."));
                     async.complete();
                 } else {
                     testContext.fail(message.cause());

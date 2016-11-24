@@ -4,7 +4,6 @@
 == ByteKafkaMessage
 
 ++++
- @author Emir Dizdarevic
 ++++
 '''
 
@@ -20,7 +19,6 @@
 == KafkaOptions
 
 ++++
- @author Emir Dizdarevic
 ++++
 '''
 
@@ -35,7 +33,6 @@
 == StringKafkaMessage
 
 ++++
- @author Emir Dizdarevic
 ++++
 '''
 

@@ -23,11 +23,11 @@ package com.hubrick.vertx.kafka.consumer.config;
  */
 public class KafkaConsumerConfiguration {
 
+    private final String clientId;
     private final String groupId;
     private final String kafkaTopic;
-    private final String zookeeper;
+    private final String bootstrapServers;
     private final String offsetReset;
-    private final int zookeeperTimeout;
     private final int maxUnacknowledged;
     private final long maxUncommitedOffsets;
     private final long ackTimeoutSeconds;
@@ -38,10 +38,10 @@ public class KafkaConsumerConfiguration {
     private final long eventBusSendTimeout;
 
     private KafkaConsumerConfiguration(final String groupId,
+                                       final String clientId,
                                        final String kafkaTopic,
-                                       final String zookeeper,
+                                       final String bootstrapServers,
                                        final String offsetReset,
-                                       final int zookeeperTimeout,
                                        final int maxUnacknowledged,
                                        final long maxUncommittedOffset,
                                        final long ackTimeoutSeconds,
@@ -50,11 +50,11 @@ public class KafkaConsumerConfiguration {
                                        final int initialRetryDelaySeconds,
                                        final int maxRetryDelaySeconds,
                                        final long eventBusSendTimeout) {
+        this.clientId = clientId;
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
-        this.zookeeper = zookeeper;
+        this.bootstrapServers = bootstrapServers;
         this.offsetReset = offsetReset;
-        this.zookeeperTimeout = zookeeperTimeout;
         this.maxUnacknowledged = maxUnacknowledged;
         this.maxUncommitedOffsets = maxUncommittedOffset;
         this.ackTimeoutSeconds = ackTimeoutSeconds;
@@ -66,10 +66,10 @@ public class KafkaConsumerConfiguration {
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
+                                                    final String clilentId,
                                                     final String kafkaTopic,
-                                                    final String zookeeper,
+                                                    final String bootstrapServers,
                                                     final String offsetReset,
-                                                    final int zookeeperTimeout,
                                                     final int maxUnacknowledged,
                                                     final long maxUncommittedOffsets,
                                                     final long ackTimeoutSeconds,
@@ -78,11 +78,12 @@ public class KafkaConsumerConfiguration {
                                                     final int initialRetryDelaySeconds,
                                                     final int maxRetryDelaySeconds,
                                                     final long eventBusSendTimeout) {
-        return new KafkaConsumerConfiguration(groupId,
+        return new KafkaConsumerConfiguration(
+                groupId,
+                clilentId,
                 kafkaTopic,
-                zookeeper,
+                bootstrapServers,
                 offsetReset,
-                zookeeperTimeout,
                 maxUnacknowledged,
                 maxUncommittedOffsets,
                 ackTimeoutSeconds,
@@ -101,16 +102,8 @@ public class KafkaConsumerConfiguration {
         return kafkaTopic;
     }
 
-    public String getZookeeper() {
-        return zookeeper;
-    }
-
     public String getOffsetReset() {
         return offsetReset;
-    }
-
-    public int getZookeeperTimeout() {
-        return zookeeperTimeout;
     }
 
     public int getMaxUnacknowledged() {
@@ -143,5 +136,13 @@ public class KafkaConsumerConfiguration {
 
     public long getEventBusSendTimeout() {
         return eventBusSendTimeout;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public String getBootstrapServers() {
+        return bootstrapServers;
     }
 }
