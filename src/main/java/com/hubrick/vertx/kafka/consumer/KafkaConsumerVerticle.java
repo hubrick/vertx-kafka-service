@@ -55,7 +55,8 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
                 config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 10),
-                config.getLong(KafkaConsumerProperties.EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT)
+                config.getLong(KafkaConsumerProperties.EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
+                config.getDouble(KafkaConsumerProperties.MESSAGES_PER_SECOND, -1D)
         );
 
         consumer = KafkaConsumerManager.create(vertx, configuration, this::handler);

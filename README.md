@@ -61,7 +61,8 @@ Service id: com.hubrick.services.kafka-consumer
       "maxRetries" : 100,
       "initialRetryDelaySeconds" : 1,
       "maxRetryDelaySeconds" : 10,
-      "eventBusSendTimeout" : 30
+      "eventBusSendTimeout" : 30,
+      "messagesPerSecond" : -1.0
     }
 ```
 
@@ -78,7 +79,8 @@ Service id: com.hubrick.services.kafka-consumer
 * `maxRetries`: Max number of retries until it consider the message failed (Default: infinite)
 * `initialRetryDelaySeconds`: Initial retry delay (Default: 1)
 * `maxRetryDelaySeconds`: Max retry delay since the retry delay is increasing (Default: 10)
-* `eventBusSendTimeout: the send timeout for the messages that are relayed to the Vertx Event Bus. That is the time the handler has to handle and respond to the message.`
+* `eventBusSendTimeout`: the send timeout for the messages that are relayed to the Vertx Event Bus. That is the time the handler has to handle and respond to the message.`
+* `messagesPerSecond`: the number of messages that should be relayed per second (Double, values bigger than 0.0 will limit, everything else is unlimitted)
 
 ### Example:
 

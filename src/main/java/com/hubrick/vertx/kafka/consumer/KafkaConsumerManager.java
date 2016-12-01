@@ -16,6 +16,7 @@
 package com.hubrick.vertx.kafka.consumer;
 
 import com.google.common.math.IntMath;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
 import io.vertx.core.Future;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,12 +73,15 @@ class KafkaConsumerManager {
     private final AtomicLong lastCommittedOffset = new AtomicLong();
     private final AtomicLong currentPartition = new AtomicLong(-1);
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
+    private final Optional<RateLimiter> rateLimiter;
 
     public KafkaConsumerManager(Vertx vertx, KafkaConsumer<String,String> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
         this.vertx = vertx;
         this.consumer = consumer;
         this.configuration = configuration;
         this.handler = handler;
+        this.rateLimiter = configuration.getMessagesPerSecond() > 0.0D ?
+                    Optional.of(RateLimiter.create(configuration.getMessagesPerSecond())) : Optional.empty();
     }
 
     public static KafkaConsumerManager create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler handler) {
@@ -115,6 +120,7 @@ class KafkaConsumerManager {
             final ConsumerRecords<String, String> records = consumer.poll(60000);
             final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
             while (iterator.hasNext()) {
+                rateLimiter.ifPresent(limiter -> limiter.acquire());
 
                 final int phase = phaser.register();
 

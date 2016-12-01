@@ -36,6 +36,7 @@ public class KafkaConsumerConfiguration {
     private final int initialRetryDelaySeconds;
     private final int maxRetryDelaySeconds;
     private final long eventBusSendTimeout;
+    private final double messagesPerSecond;
 
     private KafkaConsumerConfiguration(final String groupId,
                                        final String clientId,
@@ -49,7 +50,8 @@ public class KafkaConsumerConfiguration {
                                        final int maxRetries,
                                        final int initialRetryDelaySeconds,
                                        final int maxRetryDelaySeconds,
-                                       final long eventBusSendTimeout) {
+                                       final long eventBusSendTimeout,
+                                       final double messagesPerSecond) {
         this.clientId = clientId;
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
@@ -63,6 +65,7 @@ public class KafkaConsumerConfiguration {
         this.initialRetryDelaySeconds = initialRetryDelaySeconds;
         this.maxRetryDelaySeconds = maxRetryDelaySeconds;
         this.eventBusSendTimeout = eventBusSendTimeout;
+        this.messagesPerSecond = messagesPerSecond;
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
@@ -77,7 +80,8 @@ public class KafkaConsumerConfiguration {
                                                     final int maxRetries,
                                                     final int initialRetryDelaySeconds,
                                                     final int maxRetryDelaySeconds,
-                                                    final long eventBusSendTimeout) {
+                                                    final long eventBusSendTimeout,
+                                                    final double messagesPerSecond) {
         return new KafkaConsumerConfiguration(
                 groupId,
                 clilentId,
@@ -91,7 +95,8 @@ public class KafkaConsumerConfiguration {
                 maxRetries,
                 initialRetryDelaySeconds,
                 maxRetryDelaySeconds,
-                eventBusSendTimeout);
+                eventBusSendTimeout,
+                messagesPerSecond);
     }
 
     public String getGroupId() {
@@ -144,5 +149,9 @@ public class KafkaConsumerConfiguration {
 
     public String getBootstrapServers() {
         return bootstrapServers;
+    }
+
+    public double getMessagesPerSecond() {
+        return messagesPerSecond;
     }
 }
