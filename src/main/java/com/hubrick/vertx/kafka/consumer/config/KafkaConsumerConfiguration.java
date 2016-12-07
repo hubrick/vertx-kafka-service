@@ -36,6 +36,7 @@ public class KafkaConsumerConfiguration {
     private final int initialRetryDelaySeconds;
     private final int maxRetryDelaySeconds;
     private final long eventBusSendTimeout;
+    private final long messageMaxBytes;
 
     private KafkaConsumerConfiguration(final String groupId,
                                        final String kafkaTopic,
@@ -49,7 +50,8 @@ public class KafkaConsumerConfiguration {
                                        final int maxRetries,
                                        final int initialRetryDelaySeconds,
                                        final int maxRetryDelaySeconds,
-                                       final long eventBusSendTimeout) {
+                                       final long eventBusSendTimeout,
+                                       final long messageMaxBytes) {
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
         this.zookeeper = zookeeper;
@@ -63,6 +65,7 @@ public class KafkaConsumerConfiguration {
         this.initialRetryDelaySeconds = initialRetryDelaySeconds;
         this.maxRetryDelaySeconds = maxRetryDelaySeconds;
         this.eventBusSendTimeout = eventBusSendTimeout;
+        this.messageMaxBytes = messageMaxBytes;
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
@@ -77,7 +80,8 @@ public class KafkaConsumerConfiguration {
                                                     final int maxRetries,
                                                     final int initialRetryDelaySeconds,
                                                     final int maxRetryDelaySeconds,
-                                                    final long eventBusSendTimeout) {
+                                                    final long eventBusSendTimeout,
+                                                    final long messageMaxBytes) {
         return new KafkaConsumerConfiguration(groupId,
                 kafkaTopic,
                 zookeeper,
@@ -90,7 +94,8 @@ public class KafkaConsumerConfiguration {
                 maxRetries,
                 initialRetryDelaySeconds,
                 maxRetryDelaySeconds,
-                eventBusSendTimeout);
+                eventBusSendTimeout,
+                messageMaxBytes);
     }
 
     public String getGroupId() {
@@ -143,5 +148,9 @@ public class KafkaConsumerConfiguration {
 
     public long getEventBusSendTimeout() {
         return eventBusSendTimeout;
+    }
+
+    public long getMessageMaxBytes() {
+        return messageMaxBytes;
     }
 }
