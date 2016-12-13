@@ -22,6 +22,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
+import org.apache.kafka.common.serialization.StringSerializer;
 
 /**
  * Vert.x Module to read from a Kafka Topic.
@@ -29,7 +30,7 @@ import io.vertx.core.json.JsonObject;
  * @author Marcus Thiesen
  * @since 1.0.0
  */
-public class KafkaConsumerVerticle extends AbstractVerticle {
+public class KafkaConsumerVerticle<V> extends AbstractVerticle {
 
     private KafkaConsumerManager consumer;
     private KafkaConsumerConfiguration configuration;
@@ -56,7 +57,9 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 10),
                 config.getLong(KafkaConsumerProperties.EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
-                config.getDouble(KafkaConsumerProperties.MESSAGES_PER_SECOND, -1D)
+                config.getDouble(KafkaConsumerProperties.MESSAGES_PER_SECOND, -1D),
+                config.getString(KafkaConsumerProperties.KEY_KEY_DESERIALIZER, StringSerializer.class.getName()),
+                config.getString(KafkaConsumerProperties.KEY_VALUE_DESERIALIZER, StringSerializer.class.getName())
         );
 
         consumer = KafkaConsumerManager.create(vertx, configuration, this::handler);
@@ -71,7 +74,7 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
         return value;
     }
 
-    private void handler(final String message, final Future<Void> futureResult) {
+    private void handler(final V message, final Future<Void> futureResult) {
         final DeliveryOptions options = new DeliveryOptions();
         options.setSendTimeout(configuration.getEventBusSendTimeout());
 

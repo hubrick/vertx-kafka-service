@@ -25,6 +25,6 @@ import io.vertx.core.Future;
  * @since 1.0.0
  */
 @FunctionalInterface
-interface KafkaConsumerHandler {
-    void handle(final String message, final Future<Void> futureResult);
+interface KafkaConsumerHandler<V> {
+    void handle(final V message, final Future<Void> futureResult);
 }
