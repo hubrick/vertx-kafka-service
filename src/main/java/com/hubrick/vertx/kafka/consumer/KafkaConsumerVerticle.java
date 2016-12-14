@@ -31,6 +31,9 @@ import io.vertx.core.json.JsonObject;
  */
 public class KafkaConsumerVerticle extends AbstractVerticle {
 
+    // Default message size is one MB
+    private static final long DEFAULT_CLIENT_MESSAGE_MAX_BYTES = 1024 * 1024;
+
     private KafkaConsumer consumer;
     private KafkaConsumerConfiguration configuration;
     private String vertxAddress;
@@ -55,7 +58,8 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
                 config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 10),
-                config.getLong(KafkaConsumerProperties.EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT)
+                config.getLong(KafkaConsumerProperties.EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
+                config.getLong(KafkaConsumerProperties.CLIENT_MESSAGE_MAX_BYTES, DEFAULT_CLIENT_MESSAGE_MAX_BYTES)
         );
 
         consumer = KafkaConsumer.create(vertx, configuration, this::handler);

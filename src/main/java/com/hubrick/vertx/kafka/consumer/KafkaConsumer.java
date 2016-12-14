@@ -99,6 +99,7 @@ class KafkaConsumer {
         properties.setProperty("auto.commit.enable", Boolean.FALSE.toString());
         properties.setProperty("auto.offset.reset", configuration.getOffsetReset());
         properties.setProperty("queued.max.message.chunks", "1000");
+        properties.setProperty("fetch.message.max.bytes", Long.toString(configuration.getMessageMaxBytes()));
 
         return properties;
     }
