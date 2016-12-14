@@ -62,7 +62,9 @@ Service id: com.hubrick.services.kafka-consumer
       "initialRetryDelaySeconds" : 1,
       "maxRetryDelaySeconds" : 10,
       "eventBusSendTimeout" : 30,
-      "messagesPerSecond" : -1.0
+      "messagesPerSecond" : -1.0,
+      "keyDeserializer": "org.apache.kafka.common.serialization.StringDeserializer",
+      "valueDeserializer": "org.apache.kafka.common.serialization.StringDeserializer"
     }
 ```
 
@@ -81,6 +83,8 @@ Service id: com.hubrick.services.kafka-consumer
 * `maxRetryDelaySeconds`: Max retry delay since the retry delay is increasing (Default: 10)
 * `eventBusSendTimeout`: the send timeout for the messages that are relayed to the Vertx Event Bus. That is the time the handler has to handle and respond to the message.`
 * `messagesPerSecond`: the number of messages that should be relayed per second (Double, values bigger than 0.0 will limit, everything else is unlimitted)
+* `keyDeserializer`: The deserializer class used to deserializer the message key (Default: org.apache.kafka.common.serialization.StringDeserializer)
+* `ValueDeserializer`: The deserializer class used to deserializer the message value (Default: org.apache.kafka.common.serialization.StringDeserializer)
 
 ### Example:
 
