@@ -37,6 +37,8 @@ public class KafkaConsumerConfiguration {
     private final int maxRetryDelaySeconds;
     private final long eventBusSendTimeout;
     private final double messagesPerSecond;
+    private final String keyDeserializer;
+    private final String valueDeserializer;
 
     private KafkaConsumerConfiguration(final String groupId,
                                        final String clientId,
@@ -51,7 +53,9 @@ public class KafkaConsumerConfiguration {
                                        final int initialRetryDelaySeconds,
                                        final int maxRetryDelaySeconds,
                                        final long eventBusSendTimeout,
-                                       final double messagesPerSecond) {
+                                       final double messagesPerSecond,
+                                       final String keyDeserializer,
+                                       final String valueDeserializer) {
         this.clientId = clientId;
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
@@ -66,6 +70,8 @@ public class KafkaConsumerConfiguration {
         this.maxRetryDelaySeconds = maxRetryDelaySeconds;
         this.eventBusSendTimeout = eventBusSendTimeout;
         this.messagesPerSecond = messagesPerSecond;
+        this.keyDeserializer = keyDeserializer;
+        this.valueDeserializer = valueDeserializer;
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
@@ -81,7 +87,9 @@ public class KafkaConsumerConfiguration {
                                                     final int initialRetryDelaySeconds,
                                                     final int maxRetryDelaySeconds,
                                                     final long eventBusSendTimeout,
-                                                    final double messagesPerSecond) {
+                                                    final double messagesPerSecond,
+                                                    final String keyDeserializer,
+                                                    final String valueDeserializer) {
         return new KafkaConsumerConfiguration(
                 groupId,
                 clilentId,
@@ -96,7 +104,9 @@ public class KafkaConsumerConfiguration {
                 initialRetryDelaySeconds,
                 maxRetryDelaySeconds,
                 eventBusSendTimeout,
-                messagesPerSecond);
+                messagesPerSecond,
+                keyDeserializer,
+                valueDeserializer);
     }
 
     public String getGroupId() {
@@ -153,5 +163,13 @@ public class KafkaConsumerConfiguration {
 
     public double getMessagesPerSecond() {
         return messagesPerSecond;
+    }
+
+    public String getKeyDeserializer() {
+        return keyDeserializer;
+    }
+
+    public String getValueDeserializer() {
+        return valueDeserializer;
     }
 }

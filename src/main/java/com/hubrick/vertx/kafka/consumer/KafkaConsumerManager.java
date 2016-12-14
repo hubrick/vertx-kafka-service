@@ -25,29 +25,19 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Marcus Thiesen
  * @since 1.0.0
  */
-class KafkaConsumerManager {
+class KafkaConsumerManager<K, V> {
 
     private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumerManager.class);
 
@@ -58,7 +48,7 @@ class KafkaConsumerManager {
                                                     .build();
 
     private final Vertx vertx;
-    private final KafkaConsumer<String,String> consumer;
+    private final KafkaConsumer<K, V> consumer;
     private final KafkaConsumerConfiguration configuration;
     private final KafkaConsumerHandler handler;
     private final Set<Long> unacknowledgedOffsets = Collections.newSetFromMap(new ConcurrentHashMap<Long, Boolean>());
@@ -75,7 +65,7 @@ class KafkaConsumerManager {
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
     private final Optional<RateLimiter> rateLimiter;
 
-    public KafkaConsumerManager(Vertx vertx, KafkaConsumer<String,String> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
+    public KafkaConsumerManager(Vertx vertx, KafkaConsumer<K, V> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
         this.vertx = vertx;
         this.consumer = consumer;
         this.configuration = configuration;
@@ -84,9 +74,21 @@ class KafkaConsumerManager {
                     Optional.of(RateLimiter.create(configuration.getMessagesPerSecond())) : Optional.empty();
     }
 
-    public static KafkaConsumerManager create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler handler) {
+    public static <K, V> KafkaConsumerManager create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler<V> handler) {
         final Properties properties = createProperties(configuration);
-        final KafkaConsumer consumer = new KafkaConsumer(properties, new StringDeserializer(), new StringDeserializer());
+        Deserializer<K> keyDeserializer;
+        try {
+            keyDeserializer = (Deserializer<K>) KafkaConsumerManager.class.getClassLoader().loadClass(configuration.getKeyDeserializer()).newInstance();
+        } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+            throw new RuntimeException("Cannot Initialize Key Deserializer", e);
+        }
+        Deserializer<V> valueDeserializer;
+        try {
+            valueDeserializer = (Deserializer<V>) KafkaConsumerManager.class.getClassLoader().loadClass(configuration.getValueDeserializer()).newInstance();
+        } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+            throw new RuntimeException("Cannot Initialize Value Deserializer", e);
+        }
+        final KafkaConsumer consumer = new KafkaConsumer(properties, keyDeserializer, valueDeserializer);
         return new KafkaConsumerManager(vertx, consumer, configuration, handler);
     }
 
@@ -117,14 +119,14 @@ class KafkaConsumerManager {
 
     private void read() {
         while (!consumer.subscription().isEmpty()) {
-            final ConsumerRecords<String, String> records = consumer.poll(60000);
-            final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
+            final ConsumerRecords<K, V> records = consumer.poll(60000);
+            final Iterator<ConsumerRecord<K, V>> iterator = records.iterator();
             while (iterator.hasNext()) {
                 rateLimiter.ifPresent(limiter -> limiter.acquire());
 
                 final int phase = phaser.register();
 
-                final ConsumerRecord<String, String> msg = iterator.next();
+                final ConsumerRecord<K, V> msg = iterator.next();
                 final long offset = msg.offset();
                 final long partition = msg.partition();
                 unacknowledgedOffsets.add(offset);
@@ -148,7 +150,7 @@ class KafkaConsumerManager {
         }
     }
 
-    private void handle(String msg, Long offset, int tries, int delaySeconds) {
+    private void handle(V msg, Long offset, int tries, int delaySeconds) {
         final Future<Void> futureResult = Future.future();
         futureResult.setHandler(result -> {
             if(result.succeeded()) {
