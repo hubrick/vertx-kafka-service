@@ -66,7 +66,7 @@ class KafkaConsumerManager {
     private final Phaser phaser = new Phaser() {
         @Override
         protected boolean onAdvance(int phase, int registeredParties) {
-            LOG.debug("Advance: Phase {}, registeredParties {}", phase, registeredParties);
+            LOG.debug("{} Advance: Phase {}, registeredParties {}", configuration.getKafkaTopic(), phase, registeredParties);
             return false;
         }
     };
@@ -137,12 +137,14 @@ class KafkaConsumerManager {
                         || partititionChanged(partition)
                         || tooManyUncommittedOffsets(offset)
                         || commitTimeoutReached()) {
-                    LOG.info("Got {} unacknowledged messages, waiting for ACKs in order to commit", unacknowledgedOffsets.size());
+                    LOG.info("{} Got {} unacknowledged messages, waiting for ACKs in order to commit",
+                            configuration.getKafkaTopic(),
+                            unacknowledgedOffsets.size());
                     if (!waitForAcks(phase)) {
                         return;
                     }
                     commitOffsetsIfAllAcknowledged(offset);
-                    LOG.info("Continuing message processing");
+                    LOG.info("{} Continuing message processing", configuration.getKafkaTopic());
                 }
             }
         }
@@ -157,11 +159,18 @@ class KafkaConsumerManager {
             } else {
                 final int nextDelaySeconds = computeNextDelay(delaySeconds);
                 if (tries > 0) {
-                    LOG.error("Exception occurred during kafka message processing, will retry in {} seconds: {}", delaySeconds, msg, result.cause());
+                    LOG.error("{} Exception occurred during kafka message processing, will retry in {} seconds: {}",
+                            configuration.getKafkaTopic(),
+                            delaySeconds,
+                            msg,
+                            result.cause());
                     final int nextTry = tries - 1;
                     vertx.setTimer(delaySeconds * 1000, event -> handle(msg, offset, nextTry, nextDelaySeconds));
                 } else {
-                    LOG.error("Exception occurred during kafka message processing. Max number of retries reached. Skipping message: {}", msg, result.cause());
+                    LOG.error("{} Exception occurred during kafka message processing. Max number of retries reached. Skipping message: {}",
+                            configuration.getKafkaTopic(),
+                            msg,
+                            result.cause());
                     unacknowledgedOffsets.remove(offset);
                     phaser.arriveAndDeregister();
                 }
@@ -176,7 +185,7 @@ class KafkaConsumerManager {
 
     private boolean partititionChanged(long partition) {
         if (currentPartition.get() != partition) {
-            LOG.info("Partition changed from {} to {}", currentPartition.get(), partition);
+            LOG.info("{} Partition changed from {} to {}", configuration.getKafkaTopic(), currentPartition.get(), partition);
             currentPartition.set(partition);
             return true;
         }
@@ -196,12 +205,15 @@ class KafkaConsumerManager {
             phaser.awaitAdvanceInterruptibly(phase, configuration.getAckTimeoutSeconds(), TimeUnit.SECONDS);
             return true;
         } catch (InterruptedException e) {
-            LOG.error("Interrupted while waiting for ACKs", e);
+            LOG.error("{} Interrupted while waiting for ACKs", configuration.getKafkaTopic(), e);
             return false;
         } catch (TimeoutException e) {
-            LOG.error("Waited for {} ACKs for longer than {} seconds, not making any progress ({}/{})", new Object[]{
-                    Integer.valueOf(unacknowledgedOffsets.size()), Long.valueOf(configuration.getAckTimeoutSeconds()),
-                    Integer.valueOf(phase), Integer.valueOf(phaser.getPhase())});
+            LOG.error("{} Waited for {} ACKs for longer than {} seconds, not making any progress ({}/{})", new Object[]{
+                    configuration.getKafkaTopic(),
+                    Integer.valueOf(unacknowledgedOffsets.size()),
+                    Long.valueOf(configuration.getAckTimeoutSeconds()),
+                    Integer.valueOf(phase),
+                    Integer.valueOf(phaser.getPhase())});
             return waitForAcks(phase);
         }
     }
@@ -212,12 +224,12 @@ class KafkaConsumerManager {
 
     private void commitOffsetsIfAllAcknowledged(final long currentOffset) {
         if (unacknowledgedOffsets.isEmpty()) {
-            LOG.info("Committing at offset {}", currentOffset);
+            LOG.info("{} Committing at offset {}", configuration.getKafkaTopic(), currentOffset);
             consumer.commitSync();
             lastCommittedOffset.set(currentOffset);
             lastCommitTime.set(System.currentTimeMillis());
         } else {
-            LOG.warn("Can not commit because {} ACKs missing", unacknowledgedOffsets.size());
+            LOG.warn("{} Can not commit because {} ACKs missing", configuration.getKafkaTopic(), unacknowledgedOffsets.size());
         }
     }
 }
