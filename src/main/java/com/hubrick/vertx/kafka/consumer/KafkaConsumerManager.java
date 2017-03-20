@@ -157,7 +157,7 @@ class KafkaConsumerManager {
         futureResult.setHandler(result -> {
             if (result.succeeded()) {
                 if (waiting.get()) {
-                    LOG.info("{}: Succeeded at processing event at offset {}:",
+                    LOG.info("{}: Succeeded at processing event at offset {}: {}",
                             configuration.getKafkaTopic(),
                             offset,
                             msg
