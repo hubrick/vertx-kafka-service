@@ -156,16 +156,19 @@ class KafkaConsumerManager {
         final Future<Void> futureResult = Future.future();
         futureResult.setHandler(result -> {
             if (result.succeeded()) {
+                phaser.arriveAndDeregister();
+                unacknowledgedOffsets.remove(offset);
+
                 if (waiting.get()) {
-                    LOG.info("{}: Succeeded at processing event from partition {} at offset {}: {}",
+                    LOG.info("{}: Acknowledged event from partition {} at offset {}, still not acknowledged {}:\n{}",
                             configuration.getKafkaTopic(),
                             partition,
                             offset,
+                            unacknowledgedOffsets.size(),
                             msg
-                            );
+                    );
                 }
-                unacknowledgedOffsets.remove(offset);
-                phaser.arriveAndDeregister();
+
             } else {
                 final int nextDelaySeconds = computeNextDelay(delaySeconds);
                 if (tries > 0) {
@@ -199,7 +202,7 @@ class KafkaConsumerManager {
 
     private boolean partititionChanged(long partition) {
         if (currentPartition.get() != partition) {
-            LOG.info("{}: Partition changed from {} while having {} unacknowledged messages to {}",
+            LOG.info("{}: Partition changed from {} while having {} unacknowledged messages to partition {}",
                     configuration.getKafkaTopic(),
                     currentPartition.get(),
                     unacknowledgedOffsets.size(),
@@ -245,7 +248,7 @@ class KafkaConsumerManager {
 
     private void commitOffsetsIfAllAcknowledged(final long currentOffset) {
         if (unacknowledgedOffsets.isEmpty()) {
-            LOG.info("{}: Committing partition {} at offset {}", configuration.getKafkaTopic(), currentPartition.get(), currentOffset);
+            LOG.info("{}: Committing partition {} at offset {} (and all former partition offsets)", configuration.getKafkaTopic(), currentPartition.get(), currentOffset);
             consumer.commitSync();
             lastCommittedOffset.set(currentOffset);
             lastCommitTime.set(System.currentTimeMillis());
