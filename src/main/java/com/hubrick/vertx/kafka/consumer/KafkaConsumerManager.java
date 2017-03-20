@@ -41,6 +41,7 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -74,6 +75,7 @@ class KafkaConsumerManager {
     private final AtomicLong currentPartition = new AtomicLong(-1);
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
     private final Optional<RateLimiter> rateLimiter;
+    private final AtomicBoolean waiting = new AtomicBoolean(false);
 
     public KafkaConsumerManager(Vertx vertx, KafkaConsumer<String,String> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
         this.vertx = vertx;
@@ -153,22 +155,31 @@ class KafkaConsumerManager {
     private void handle(String msg, Long offset, int tries, int delaySeconds) {
         final Future<Void> futureResult = Future.future();
         futureResult.setHandler(result -> {
-            if(result.succeeded()) {
+            if (result.succeeded()) {
+                if (waiting.get()) {
+                    LOG.info("{}: Succeeded at processing event at offset {}:",
+                            configuration.getKafkaTopic(),
+                            offset,
+                            msg
+                            );
+                }
                 unacknowledgedOffsets.remove(offset);
                 phaser.arriveAndDeregister();
             } else {
                 final int nextDelaySeconds = computeNextDelay(delaySeconds);
                 if (tries > 0) {
-                    LOG.error("{}: Exception occurred during kafka message processing, will retry in {} seconds: {}",
+                    LOG.error("{}: Exception occurred during kafka message processing at offset {}, will retry in {} seconds: {}",
                             configuration.getKafkaTopic(),
+                            offset,
                             delaySeconds,
                             msg,
                             result.cause());
                     final int nextTry = tries - 1;
                     vertx.setTimer(delaySeconds * 1000, event -> handle(msg, offset, nextTry, nextDelaySeconds));
                 } else {
-                    LOG.error("{}: Exception occurred during kafka message processing. Max number of retries reached. Skipping message: {}",
+                    LOG.error("{}: Exception occurred during kafka message processing at offset {}. Max number of retries reached. Skipping message: {}",
                             configuration.getKafkaTopic(),
+                            offset,
                             msg,
                             result.cause());
                     unacknowledgedOffsets.remove(offset);
@@ -206,6 +217,7 @@ class KafkaConsumerManager {
 
     private boolean waitForAcks(int phase) {
         try {
+            waiting.set(true);
             phaser.awaitAdvanceInterruptibly(phase, configuration.getAckTimeoutSeconds(), TimeUnit.SECONDS);
             return true;
         } catch (InterruptedException e) {
@@ -219,6 +231,8 @@ class KafkaConsumerManager {
                     Integer.valueOf(phase),
                     Integer.valueOf(phaser.getPhase())});
             return waitForAcks(phase);
+        } finally {
+            waiting.set(false);
         }
     }
 
