@@ -185,7 +185,11 @@ class KafkaConsumerManager {
 
     private boolean partititionChanged(long partition) {
         if (currentPartition.get() != partition) {
-            LOG.info("{}: Partition changed from {} to {}", configuration.getKafkaTopic(), currentPartition.get(), partition);
+            LOG.info("{}: Partition changed from {}, which has {} unacknowledged messages to {}",
+                    configuration.getKafkaTopic(),
+                    currentPartition.get(),
+                    unacknowledgedOffsets.size(),
+                    partition);
             currentPartition.set(partition);
             return true;
         }
