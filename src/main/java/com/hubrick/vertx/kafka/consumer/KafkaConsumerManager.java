@@ -133,7 +133,7 @@ class KafkaConsumerManager {
                 lastCommittedOffset.compareAndSet(0, offset);
                 currentPartition.compareAndSet(-1, partition);
 
-                handle(msg.value(), offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
+                handle(msg.value(), partition, offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
 
                 if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
                         || partititionChanged(partition)
@@ -152,13 +152,14 @@ class KafkaConsumerManager {
         }
     }
 
-    private void handle(String msg, Long offset, int tries, int delaySeconds) {
+    private void handle(String msg, Long partition, Long offset, int tries, int delaySeconds) {
         final Future<Void> futureResult = Future.future();
         futureResult.setHandler(result -> {
             if (result.succeeded()) {
                 if (waiting.get()) {
-                    LOG.info("{}: Succeeded at processing event at offset {}: {}",
+                    LOG.info("{}: Succeeded at processing event from partition {} at offset {}: {}",
                             configuration.getKafkaTopic(),
+                            partition,
                             offset,
                             msg
                             );
@@ -168,18 +169,20 @@ class KafkaConsumerManager {
             } else {
                 final int nextDelaySeconds = computeNextDelay(delaySeconds);
                 if (tries > 0) {
-                    LOG.error("{}: Exception occurred during kafka message processing at offset {}, will retry in {} seconds: {}",
+                    LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition {}, will retry in {} seconds: {}",
                             configuration.getKafkaTopic(),
                             offset,
+                            partition,
                             delaySeconds,
                             msg,
                             result.cause());
                     final int nextTry = tries - 1;
-                    vertx.setTimer(delaySeconds * 1000, event -> handle(msg, offset, nextTry, nextDelaySeconds));
+                    vertx.setTimer(delaySeconds * 1000, event -> handle(msg, partition, offset, nextTry, nextDelaySeconds));
                 } else {
-                    LOG.error("{}: Exception occurred during kafka message processing at offset {}. Max number of retries reached. Skipping message: {}",
+                    LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition. Max number of retries reached. Skipping message: {}",
                             configuration.getKafkaTopic(),
                             offset,
+                            partition,
                             msg,
                             result.cause());
                     unacknowledgedOffsets.remove(offset);
@@ -196,7 +199,7 @@ class KafkaConsumerManager {
 
     private boolean partititionChanged(long partition) {
         if (currentPartition.get() != partition) {
-            LOG.info("{}: Partition changed from {}, which has {} unacknowledged messages to {}",
+            LOG.info("{}: Partition changed from {} while having {} unacknowledged messages to {}",
                     configuration.getKafkaTopic(),
                     currentPartition.get(),
                     unacknowledgedOffsets.size(),
@@ -247,7 +250,7 @@ class KafkaConsumerManager {
             lastCommittedOffset.set(currentOffset);
             lastCommitTime.set(System.currentTimeMillis());
         } else {
-            LOG.warn("{}: Can not commit partition {} because {} ACKs missing", configuration.getKafkaTopic(), currentPartition.get(), unacknowledgedOffsets.size());
+            LOG.warn("{}: Can not commit because {} ACKs missing", configuration.getKafkaTopic(), unacknowledgedOffsets.size());
         }
     }
 }
