@@ -144,7 +144,7 @@ class KafkaConsumerManager {
                         return;
                     }
                     commitOffsetsIfAllAcknowledged(offset);
-                    LOG.info("{}: Continuing message processing", configuration.getKafkaTopic());
+                    LOG.info("{}: Continuing message processing on partition {}", configuration.getKafkaTopic(), currentPartition.get());
                 }
             }
         }
@@ -228,12 +228,12 @@ class KafkaConsumerManager {
 
     private void commitOffsetsIfAllAcknowledged(final long currentOffset) {
         if (unacknowledgedOffsets.isEmpty()) {
-            LOG.info("{}: Committing at offset {}", configuration.getKafkaTopic(), currentOffset);
+            LOG.info("{}: Committing partition {} at offset {}", configuration.getKafkaTopic(), currentPartition.get(), currentOffset);
             consumer.commitSync();
             lastCommittedOffset.set(currentOffset);
             lastCommitTime.set(System.currentTimeMillis());
         } else {
-            LOG.warn("{}: Can not commit because {} ACKs missing", configuration.getKafkaTopic(), unacknowledgedOffsets.size());
+            LOG.warn("{}: Can not commit partition {} because {} ACKs missing", configuration.getKafkaTopic(), currentPartition.get(), unacknowledgedOffsets.size());
         }
     }
 }
