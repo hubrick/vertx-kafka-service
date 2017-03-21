@@ -182,7 +182,7 @@ class KafkaConsumerManager {
                     final int nextTry = tries - 1;
                     vertx.setTimer(delaySeconds * 1000, event -> handle(msg, partition, offset, nextTry, nextDelaySeconds));
                 } else {
-                    LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition. Max number of retries reached. Skipping message: {}",
+                    LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition {}. Max number of retries reached. Skipping message: {}",
                             configuration.getKafkaTopic(),
                             offset,
                             partition,
