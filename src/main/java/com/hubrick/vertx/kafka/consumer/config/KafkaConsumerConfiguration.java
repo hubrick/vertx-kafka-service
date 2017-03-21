@@ -37,6 +37,7 @@ public class KafkaConsumerConfiguration {
     private final int maxRetryDelaySeconds;
     private final long eventBusSendTimeout;
     private final double messagesPerSecond;
+    private final boolean commitOnPartitionChange;
 
     private KafkaConsumerConfiguration(final String groupId,
                                        final String clientId,
@@ -51,7 +52,8 @@ public class KafkaConsumerConfiguration {
                                        final int initialRetryDelaySeconds,
                                        final int maxRetryDelaySeconds,
                                        final long eventBusSendTimeout,
-                                       final double messagesPerSecond) {
+                                       final double messagesPerSecond,
+                                       final boolean commitOnPartitionChange) {
         this.clientId = clientId;
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
@@ -66,6 +68,7 @@ public class KafkaConsumerConfiguration {
         this.maxRetryDelaySeconds = maxRetryDelaySeconds;
         this.eventBusSendTimeout = eventBusSendTimeout;
         this.messagesPerSecond = messagesPerSecond;
+        this.commitOnPartitionChange = commitOnPartitionChange;
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
@@ -81,7 +84,8 @@ public class KafkaConsumerConfiguration {
                                                     final int initialRetryDelaySeconds,
                                                     final int maxRetryDelaySeconds,
                                                     final long eventBusSendTimeout,
-                                                    final double messagesPerSecond) {
+                                                    final double messagesPerSecond,
+                                                    final boolean commitOnPartitionChange) {
         return new KafkaConsumerConfiguration(
                 groupId,
                 clilentId,
@@ -96,7 +100,8 @@ public class KafkaConsumerConfiguration {
                 initialRetryDelaySeconds,
                 maxRetryDelaySeconds,
                 eventBusSendTimeout,
-                messagesPerSecond);
+                messagesPerSecond,
+                commitOnPartitionChange);
     }
 
     public String getGroupId() {
@@ -153,5 +158,9 @@ public class KafkaConsumerConfiguration {
 
     public double getMessagesPerSecond() {
         return messagesPerSecond;
+    }
+
+    public boolean isCommitOnPartitionChange() {
+        return commitOnPartitionChange;
     }
 }

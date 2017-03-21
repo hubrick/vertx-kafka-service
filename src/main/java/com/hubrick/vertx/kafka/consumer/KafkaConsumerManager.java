@@ -202,13 +202,14 @@ class KafkaConsumerManager {
 
     private boolean partititionChanged(long partition) {
         if (currentPartition.get() != partition) {
-            LOG.info("{}: Partition changed from {} while having {} unacknowledged messages to partition {}",
+            LOG.info("{}: Partition changed from {} while having {} unacknowledged messages to partition {}"
+            + (configuration.isCommitOnPartitionChange() ? " initiating commit" : " continuing processing"),
                     configuration.getKafkaTopic(),
                     currentPartition.get(),
                     unacknowledgedOffsets.size(),
                     partition);
             currentPartition.set(partition);
-            return true;
+            return configuration.isCommitOnPartitionChange();
         }
         return false;
     }

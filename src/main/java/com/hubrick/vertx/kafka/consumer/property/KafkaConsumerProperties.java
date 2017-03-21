@@ -41,4 +41,5 @@ public final class KafkaConsumerProperties {
     public static final String KEY_MAX_RETRY_DELAY_SECONDS = "maxRetryDelaySeconds";
     public static final String EVENT_BUS_SEND_TIMEOUT = "eventBusSendTimeout";
     public static final String MESSAGES_PER_SECOND = "messagesPerSecond";
+    public static final String COMMIT_ON_PARTITION_CHANGE = "commitOnPartitionChange";
 }
