@@ -181,11 +181,12 @@ class KafkaConsumerManager {
                 completableFuture.completeExceptionally(result.cause());
                 if (tries > 0) {
                     if (!configuration.isStrictOrderingEnabled()) {
-                        LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition {}, will retry in {} seconds: {}",
+                        LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition {}, will retry in {} seconds ({} remaining tries): {}",
                                 configuration.getKafkaTopic(),
                                 offset,
                                 partition,
                                 delaySeconds,
+                                tries,
                                 msg,
                                 result.cause());
 
@@ -214,11 +215,12 @@ class KafkaConsumerManager {
                 LOG.error("{}: Interrupted while waiting for strict ACK", configuration.getKafkaTopic(), e);
             } catch (ExecutionException e) {
                 if (tries > 0) {
-                    LOG.error("{}: Exception occurred during kafka message processing in strict mode at offset {} on partition {}, will retry in {} seconds: {}",
+                    LOG.error("{}: Exception occurred during kafka message processing in strict mode at offset {} on partition {}, will retry in {} seconds ({} remaining tries): {}",
                             configuration.getKafkaTopic(),
                             offset,
                             partition,
                             delaySeconds,
+                            tries,
                             msg,
                             e);
                     try {
