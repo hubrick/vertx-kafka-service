@@ -38,6 +38,7 @@ public class KafkaConsumerConfiguration {
     private final long eventBusSendTimeout;
     private final double messagesPerSecond;
     private final boolean commitOnPartitionChange;
+    private final boolean strictOrderingEnabled;
 
     private KafkaConsumerConfiguration(final String groupId,
                                        final String clientId,
@@ -53,7 +54,8 @@ public class KafkaConsumerConfiguration {
                                        final int maxRetryDelaySeconds,
                                        final long eventBusSendTimeout,
                                        final double messagesPerSecond,
-                                       final boolean commitOnPartitionChange) {
+                                       final boolean commitOnPartitionChange,
+                                       final boolean strictOrderingEnabled) {
         this.clientId = clientId;
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
@@ -69,6 +71,7 @@ public class KafkaConsumerConfiguration {
         this.eventBusSendTimeout = eventBusSendTimeout;
         this.messagesPerSecond = messagesPerSecond;
         this.commitOnPartitionChange = commitOnPartitionChange;
+        this.strictOrderingEnabled = strictOrderingEnabled;
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
@@ -85,7 +88,8 @@ public class KafkaConsumerConfiguration {
                                                     final int maxRetryDelaySeconds,
                                                     final long eventBusSendTimeout,
                                                     final double messagesPerSecond,
-                                                    final boolean commitOnPartitionChange) {
+                                                    final boolean commitOnPartitionChange,
+                                                    final boolean strictOrderingEnabled) {
         return new KafkaConsumerConfiguration(
                 groupId,
                 clilentId,
@@ -101,7 +105,8 @@ public class KafkaConsumerConfiguration {
                 maxRetryDelaySeconds,
                 eventBusSendTimeout,
                 messagesPerSecond,
-                commitOnPartitionChange);
+                commitOnPartitionChange,
+                strictOrderingEnabled);
     }
 
     public String getGroupId() {
@@ -162,5 +167,9 @@ public class KafkaConsumerConfiguration {
 
     public boolean isCommitOnPartitionChange() {
         return commitOnPartitionChange;
+    }
+
+    public boolean isStrictOrderingEnabled() {
+        return strictOrderingEnabled;
     }
 }

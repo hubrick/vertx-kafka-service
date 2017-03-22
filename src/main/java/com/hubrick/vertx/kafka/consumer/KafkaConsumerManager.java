@@ -34,7 +34,9 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
@@ -154,8 +156,14 @@ class KafkaConsumerManager {
 
     private void handle(String msg, Long partition, Long offset, int tries, int delaySeconds) {
         final Future<Void> futureResult = Future.future();
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+
+        final int nextDelaySeconds = computeNextDelay(delaySeconds);
+        final int nextTry = tries - 1;
+
         futureResult.setHandler(result -> {
             if (result.succeeded()) {
+                completableFuture.complete(null);
                 phaser.arriveAndDeregister();
                 unacknowledgedOffsets.remove(offset);
 
@@ -170,17 +178,20 @@ class KafkaConsumerManager {
                 }
 
             } else {
-                final int nextDelaySeconds = computeNextDelay(delaySeconds);
+                completableFuture.completeExceptionally(result.cause());
                 if (tries > 0) {
-                    LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition {}, will retry in {} seconds: {}",
-                            configuration.getKafkaTopic(),
-                            offset,
-                            partition,
-                            delaySeconds,
-                            msg,
-                            result.cause());
-                    final int nextTry = tries - 1;
-                    vertx.setTimer(delaySeconds * 1000, event -> handle(msg, partition, offset, nextTry, nextDelaySeconds));
+                    if (!configuration.isStrictOrderingEnabled()) {
+                        LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition {}, will retry in {} seconds: {}",
+                                configuration.getKafkaTopic(),
+                                offset,
+                                partition,
+                                delaySeconds,
+                                msg,
+                                result.cause());
+
+                        vertx.setTimer(delaySeconds * 1000, event -> handle(msg, partition, offset, nextTry, nextDelaySeconds));
+                    }
+
                 } else {
                     LOG.error("{}: Exception occurred during kafka message processing at offset {} on partition {}. Max number of retries reached. Skipping message: {}",
                             configuration.getKafkaTopic(),
@@ -193,7 +204,38 @@ class KafkaConsumerManager {
                 }
             }
         });
+
         handler.handle(msg, futureResult);
+
+        if (configuration.isStrictOrderingEnabled()) {
+            try {
+                completableFuture.get(configuration.getAckTimeoutSeconds(), TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                LOG.error("{}: Interrupted while waiting for strict ACK", configuration.getKafkaTopic(), e);
+            } catch (ExecutionException e) {
+                if (tries > 0) {
+                    LOG.error("{}: Exception occurred during kafka message processing in strict mode at offset {} on partition {}, will retry in {} seconds: {}",
+                            configuration.getKafkaTopic(),
+                            offset,
+                            partition,
+                            delaySeconds,
+                            msg,
+                            e);
+                    try {
+                        Thread.sleep(delaySeconds * 1000);
+                    } catch (InterruptedException e1) {
+                        LOG.error("{}: Interrupted while waiting for retry", configuration.getKafkaTopic(), e1);
+                    }
+                    handle(msg, partition, offset, nextTry, nextDelaySeconds);
+                }
+            } catch (TimeoutException e) {
+                LOG.error("{}: Waited for {} strict ACKs for longer than {} seconds, not making any progress", new Object[]{
+                        configuration.getKafkaTopic(),
+                        Integer.valueOf(unacknowledgedOffsets.size()),
+                        Long.valueOf(configuration.getAckTimeoutSeconds()),
+                    });
+            }
+        }
     }
 
     private boolean commitTimeoutReached() {
