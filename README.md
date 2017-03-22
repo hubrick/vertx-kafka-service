@@ -16,13 +16,15 @@ This service allows you to bridge messages from Kafka to the Vert.x Event Bus. I
 
 It achieves "at-least-once" semantics, all Event Bus messages must be acknowledged by the handler in order to commit the current Kafka offset. This means that your handler on the Event Bus must be able to handle message replays.
 
+The ordering is in so far preserved as the messages are relayed to the Vert.x EventBus in the order of arrival. If certain actions take longer than others the order will get violated, because the consumer does not wait for the ACKs before relaying the next message. To ensure strict ordering enable `strictOrdering`.
+
 When certain limits are reached a commit cycle will happen. A commit cycle waits for all outstanding acknowledgements in order to commit the current Kafka offset. 
 
 Commit cycles will happen on any of the following conditions:
 
  * `maxUnacknowledged` is reached, meaning that this amount of messages is currently unacknowledged by the Vert.x handlers.
  * `maxUncommited` is reached, meaning that the difference between the last offset that was committed and the current offset is `maxUncommited`
- * The Kafka partition from which the consumer consumes is switched. In order to reduce the amount of commit cycles caused by this condition one should start a consumer per partition.
+ * The Kafka partition from which the consumer consumes is switched. In order to reduce the amount of commit cycles caused by this condition one should start a consumer per partition or disable this via `commitOnPartitionChange`.
  * `commitTimeoutMs` is reached, meaning the time between the last and the current message was bigger than last commit timeout in milliseconds. 
  
 ## Vert.x Kafka Producer
@@ -62,7 +64,9 @@ Service id: com.hubrick.services.kafka-consumer
       "initialRetryDelaySeconds" : 1,
       "maxRetryDelaySeconds" : 10,
       "eventBusSendTimeout" : 30,
-      "messagesPerSecond" : -1.0
+      "messagesPerSecond" : -1.0,
+      "commitOnPartitionChange": true,
+      "strictOrdering": false
     }
 ```
 
@@ -81,6 +85,8 @@ Service id: com.hubrick.services.kafka-consumer
 * `maxRetryDelaySeconds`: Max retry delay since the retry delay is increasing (Default: 10)
 * `eventBusSendTimeout`: the send timeout for the messages that are relayed to the Vertx Event Bus. That is the time the handler has to handle and respond to the message.`
 * `messagesPerSecond`: the number of messages that should be relayed per second (Double, values bigger than 0.0 will limit, everything else is unlimitted)
+* `commitOnPartitionChange`: Run a commit cycle when the partition changes. This is mostly another trigger if you do not have that many messages on a topic and want to make sure a commit happens regularly. (Default: true)
+* `strictOrdering`: Makes the consumer await an acknowledgement before relaying the next message. Messages will thus not be handled in parallel anymore but strictly in the order of arrival. (Default: false)
 
 ### Example:
 
