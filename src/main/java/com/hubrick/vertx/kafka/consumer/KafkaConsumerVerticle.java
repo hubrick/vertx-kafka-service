@@ -77,7 +77,7 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
         final DeliveryOptions options = new DeliveryOptions();
         options.setSendTimeout(configuration.getEventBusSendTimeout());
 
-        vertx.eventBus().send(vertxAddress, message, (result) -> {
+        vertx.eventBus().send(vertxAddress, message, options, (result) -> {
             if (result.succeeded()) {
                 futureResult.complete();
             } else {
