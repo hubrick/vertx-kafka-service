@@ -120,37 +120,42 @@ class KafkaConsumerManager {
     }
 
     private void read() {
-        while (!consumer.subscription().isEmpty()) {
-            final ConsumerRecords<String, String> records = consumer.poll(60000);
-            final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
-            while (iterator.hasNext()) {
-                rateLimiter.ifPresent(limiter -> limiter.acquire());
+        try {
+            while (!consumer.subscription().isEmpty()) {
+                final ConsumerRecords<String, String> records = consumer.poll(60000);
+                final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
+                while (iterator.hasNext()) {
+                    rateLimiter.ifPresent(limiter -> limiter.acquire());
 
-                final int phase = phaser.register();
+                    final int phase = phaser.register();
 
-                final ConsumerRecord<String, String> msg = iterator.next();
-                final long offset = msg.offset();
-                final long partition = msg.partition();
-                unacknowledgedOffsets.add(offset);
-                lastCommittedOffset.compareAndSet(0, offset);
-                currentPartition.compareAndSet(-1, partition);
+                    final ConsumerRecord<String, String> msg = iterator.next();
+                    final long offset = msg.offset();
+                    final long partition = msg.partition();
+                    unacknowledgedOffsets.add(offset);
+                    lastCommittedOffset.compareAndSet(0, offset);
+                    currentPartition.compareAndSet(-1, partition);
 
-                handle(msg.value(), partition, offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
+                    handle(msg.value(), partition, offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
 
-                if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
-                        || partititionChanged(partition)
-                        || tooManyUncommittedOffsets(offset)
-                        || commitTimeoutReached()) {
-                    LOG.info("{}: Got {} unacknowledged messages, waiting for ACKs in order to commit",
-                            configuration.getKafkaTopic(),
-                            unacknowledgedOffsets.size());
-                    if (!waitForAcks(phase)) {
-                        return;
+                    if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
+                            || partititionChanged(partition)
+                            || tooManyUncommittedOffsets(offset)
+                            || commitTimeoutReached()) {
+                        LOG.info("{}: Got {} unacknowledged messages, waiting for ACKs in order to commit",
+                                configuration.getKafkaTopic(),
+                                unacknowledgedOffsets.size());
+                        if (!waitForAcks(phase)) {
+                            return;
+                        }
+                        commitOffsetsIfAllAcknowledged(offset);
+                        LOG.info("{}: Continuing message processing on partition {}", configuration.getKafkaTopic(), currentPartition.get());
                     }
-                    commitOffsetsIfAllAcknowledged(offset);
-                    LOG.info("{}: Continuing message processing on partition {}", configuration.getKafkaTopic(), currentPartition.get());
                 }
             }
+            LOG.error("ConsumerManager:read exited loop, consuming of messages has ended.");
+        } catch (final Throwable t) {
+            LOG.error("ConsumerManager:read has an uncaught exception, consuming of messages will fail.", t);
         }
     }
 
