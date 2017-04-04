@@ -50,7 +50,7 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "latest"),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_UNACKNOWLEDGED, 100),
                 config.getLong(KafkaConsumerProperties.KEY_MAX_UNCOMMITTED_OFFSETS, 1000L),
-                config.getLong(KafkaConsumerProperties.KEY_ACK_TIMEOUT_SECONDS, 600L),
+                config.getLong(KafkaConsumerProperties.KEY_ACK_TIMEOUT_SECONDS, 240L),
                 config.getLong(KafkaConsumerProperties.KEY_COMMIT_TIMEOUT_MS, 5 * 60 * 1000L),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
                 config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
