@@ -153,9 +153,9 @@ class KafkaConsumerManager {
                     }
                 }
             }
-            LOG.error("ConsumerManager:read exited loop, consuming of messages has ended.");
+            LOG.error("{}: ConsumerManager:read exited loop, consuming of messages has ended.", configuration.getKafkaTopic());
         } catch (final Throwable t) {
-            LOG.error("ConsumerManager:read has an uncaught exception, consuming of messages will fail.", t);
+            LOG.error("{}: ConsumerManager:read has an uncaught exception, consuming of messages will fail.", configuration.getKafkaTopic(), t);
         }
     }
 
@@ -302,6 +302,7 @@ class KafkaConsumerManager {
             consumer.commitSync();
             lastCommittedOffset.set(currentOffset);
             lastCommitTime.set(System.currentTimeMillis());
+            LOG.info("{}: Committing partition {} at offset {} (and all former partition offsets) was successful", configuration.getKafkaTopic(), currentPartition.get(), currentOffset);
         } else {
             LOG.warn("{}: Can not commit because {} ACKs missing", configuration.getKafkaTopic(), unacknowledgedOffsets.size());
         }
