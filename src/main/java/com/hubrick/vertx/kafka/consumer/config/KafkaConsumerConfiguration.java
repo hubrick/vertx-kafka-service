@@ -39,6 +39,7 @@ public class KafkaConsumerConfiguration {
     private final double messagesPerSecond;
     private final boolean commitOnPartitionChange;
     private final boolean strictOrderingEnabled;
+    private final int maxPollRecords;
 
     private KafkaConsumerConfiguration(final String groupId,
                                        final String clientId,
@@ -55,7 +56,8 @@ public class KafkaConsumerConfiguration {
                                        final long eventBusSendTimeout,
                                        final double messagesPerSecond,
                                        final boolean commitOnPartitionChange,
-                                       final boolean strictOrderingEnabled) {
+                                       final boolean strictOrderingEnabled,
+                                       final int maxPollRecords) {
         this.clientId = clientId;
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
@@ -72,6 +74,7 @@ public class KafkaConsumerConfiguration {
         this.messagesPerSecond = messagesPerSecond;
         this.commitOnPartitionChange = commitOnPartitionChange;
         this.strictOrderingEnabled = strictOrderingEnabled;
+        this.maxPollRecords = maxPollRecords;
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
@@ -89,7 +92,8 @@ public class KafkaConsumerConfiguration {
                                                     final long eventBusSendTimeout,
                                                     final double messagesPerSecond,
                                                     final boolean commitOnPartitionChange,
-                                                    final boolean strictOrderingEnabled) {
+                                                    final boolean strictOrderingEnabled,
+                                                    final int maxPollRecords) {
         return new KafkaConsumerConfiguration(
                 groupId,
                 clilentId,
@@ -106,7 +110,8 @@ public class KafkaConsumerConfiguration {
                 eventBusSendTimeout,
                 messagesPerSecond,
                 commitOnPartitionChange,
-                strictOrderingEnabled);
+                strictOrderingEnabled,
+                maxPollRecords);
     }
 
     public String getGroupId() {
@@ -171,5 +176,9 @@ public class KafkaConsumerConfiguration {
 
     public boolean isStrictOrderingEnabled() {
         return strictOrderingEnabled;
+    }
+
+    public int getMaxPollRecords() {
+        return maxPollRecords;
     }
 }

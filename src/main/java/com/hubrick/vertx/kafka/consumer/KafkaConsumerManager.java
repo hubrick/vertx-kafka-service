@@ -102,6 +102,7 @@ class KafkaConsumerManager {
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, configuration.getGroupId());
         properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Boolean.FALSE.toString());
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configuration.getOffsetReset());
+        properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(configuration.getMaxPollRecords()));
 
         return properties;
     }
