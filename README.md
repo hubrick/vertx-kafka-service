@@ -18,7 +18,7 @@ It achieves "at-least-once" semantics, all Event Bus messages must be acknowledg
 
 The ordering is in so far preserved as the messages are relayed to the Vert.x EventBus in the order of arrival. If certain actions take longer than others the order will get violated, because the consumer does not wait for the ACKs before relaying the next message. To ensure strict ordering enable `strictOrdering`.
 
-When certain limits are reached a commit cycle will happen. A commit cycle waits for all outstanding acknowledgements in order to commit the current Kafka offset. 
+When certain limits are reached a commit cycle will happen. A commit cycle waits for all outstanding acknowledgements in order to commit the current Kafka offset. You have to be able to fulfill the commit cycle in less than what is configured as `max.poll.interval.ms` (5 minutes is the default), otherwise you have to reduce the number of records that are handled at a given time (`maxPollRecords`)
 
 Commit cycles will happen on any of the following conditions:
 
@@ -66,7 +66,8 @@ Service id: com.hubrick.services.kafka-consumer
       "eventBusSendTimeout" : 30,
       "messagesPerSecond" : -1.0,
       "commitOnPartitionChange": true,
-      "strictOrdering": false
+      "strictOrdering": false,
+      "maxPollRecords": 500
     }
 ```
 
@@ -87,6 +88,8 @@ Service id: com.hubrick.services.kafka-consumer
 * `messagesPerSecond`: the number of messages that should be relayed per second (Double, values bigger than 0.0 will limit, everything else is unlimitted)
 * `commitOnPartitionChange`: Run a commit cycle when the partition changes. This is mostly another trigger if you do not have that many messages on a topic and want to make sure a commit happens regularly. (Default: true)
 * `strictOrdering`: Makes the consumer await an acknowledgement before relaying the next message. Messages will thus not be handled in parallel anymore but strictly in the order of arrival. (Default: false)
+* `maxPollRecords`: Number of messages that are taken from a Kafka Topic with a single poll call. You should be able to handle this number of messages in less than `max.poll.interval.ms` (5 minutes), otherwise it might happen that Kafka marks your consumer as 
+down during a commit cycle that takes longer. 
 
 ### Example:
 
