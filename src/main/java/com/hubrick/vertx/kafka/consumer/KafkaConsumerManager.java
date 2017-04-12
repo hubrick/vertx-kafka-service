@@ -17,8 +17,8 @@ package com.hubrick.vertx.kafka.consumer;
 
 import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.RateLimiter;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
+import com.hubrick.vertx.kafka.consumer.util.ThreadFactoryUtil;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -40,7 +40,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -54,18 +53,13 @@ class KafkaConsumerManager {
 
     private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumerManager.class);
 
-    private final static ThreadFactory FACTORY = new ThreadFactoryBuilder()
-                                                    .setNameFormat("kafka-consumer-thread-%d")
-                                                    .setUncaughtExceptionHandler((thread, throwable) -> LOG.error("Uncaught exception in thread {}", thread.getName(), throwable))
-                                                    .setDaemon(true)
-                                                    .build();
-
     private final Vertx vertx;
     private final KafkaConsumer<String,String> consumer;
     private final KafkaConsumerConfiguration configuration;
     private final KafkaConsumerHandler handler;
-    private final Set<Long> unacknowledgedOffsets = Collections.newSetFromMap(new ConcurrentHashMap<Long, Boolean>());
-    private final ExecutorService messageProcessorExececutor = Executors.newSingleThreadExecutor(FACTORY);
+
+    private final ExecutorService messageProcessorExececutor = Executors.newSingleThreadExecutor(ThreadFactoryUtil.createThreadFactory("kafka-consumer-thread-%d", LOG));
+
     private final Phaser phaser = new Phaser() {
         @Override
         protected boolean onAdvance(int phase, int registeredParties) {
@@ -73,6 +67,7 @@ class KafkaConsumerManager {
             return false;
         }
     };
+    private final Set<Long> unacknowledgedOffsets = Collections.newSetFromMap(new ConcurrentHashMap<Long, Boolean>());
     private final AtomicLong lastCommittedOffset = new AtomicLong();
     private final AtomicLong currentPartition = new AtomicLong(-1);
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
@@ -113,51 +108,47 @@ class KafkaConsumerManager {
         consumer.close();
     }
 
-    public void start() {
+    public java.util.concurrent.Future<?> start() {
         final String kafkaTopic = configuration.getKafkaTopic();
         consumer.subscribe(Collections.singletonList(kafkaTopic));
 
-        messageProcessorExececutor.submit(() -> read());
+        return messageProcessorExececutor.submit(() -> read());
     }
 
     private void read() {
-        try {
-            while (!consumer.subscription().isEmpty()) {
-                final ConsumerRecords<String, String> records = consumer.poll(60000);
-                final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
-                while (iterator.hasNext()) {
-                    rateLimiter.ifPresent(limiter -> limiter.acquire());
+        while (!consumer.subscription().isEmpty()) {
+            final ConsumerRecords<String, String> records = consumer.poll(60000);
+            final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
+            while (iterator.hasNext()) {
+                rateLimiter.ifPresent(limiter -> limiter.acquire());
 
-                    final int phase = phaser.register();
+                final int phase = phaser.register();
 
-                    final ConsumerRecord<String, String> msg = iterator.next();
-                    final long offset = msg.offset();
-                    final long partition = msg.partition();
-                    unacknowledgedOffsets.add(offset);
-                    lastCommittedOffset.compareAndSet(0, offset);
-                    currentPartition.compareAndSet(-1, partition);
+                final ConsumerRecord<String, String> msg = iterator.next();
+                final long offset = msg.offset();
+                final long partition = msg.partition();
+                unacknowledgedOffsets.add(offset);
+                lastCommittedOffset.compareAndSet(0, offset);
+                currentPartition.compareAndSet(-1, partition);
 
-                    handle(msg.value(), partition, offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
+                handle(msg.value(), partition, offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
 
-                    if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
-                            || partititionChanged(partition)
-                            || tooManyUncommittedOffsets(offset)
-                            || commitTimeoutReached()) {
-                        LOG.info("{}: Got {} unacknowledged messages, waiting for ACKs in order to commit",
-                                configuration.getKafkaTopic(),
-                                unacknowledgedOffsets.size());
-                        if (!waitForAcks(phase)) {
-                            return;
-                        }
-                        commitOffsetsIfAllAcknowledged(offset);
-                        LOG.info("{}: Continuing message processing on partition {}", configuration.getKafkaTopic(), currentPartition.get());
+                if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
+                        || partititionChanged(partition)
+                        || tooManyUncommittedOffsets(offset)
+                        || commitTimeoutReached()) {
+                    LOG.info("{}: Got {} unacknowledged messages, waiting for ACKs in order to commit",
+                            configuration.getKafkaTopic(),
+                            unacknowledgedOffsets.size());
+                    if (!waitForAcks(phase)) {
+                        return;
                     }
+                    commitOffsetsIfAllAcknowledged(offset);
+                    LOG.info("{}: Continuing message processing on partition {}", configuration.getKafkaTopic(), currentPartition.get());
                 }
             }
-            LOG.error("{}: ConsumerManager:read exited loop, consuming of messages has ended.", configuration.getKafkaTopic());
-        } catch (final Throwable t) {
-            LOG.error("{}: ConsumerManager:read has an uncaught exception, consuming of messages will fail.", configuration.getKafkaTopic(), t);
         }
+        LOG.info("{}: ConsumerManager:read exited loop, consuming of messages has ended.", configuration.getKafkaTopic());
     }
 
     private void handle(String msg, Long partition, Long offset, int tries, int delaySeconds) {
