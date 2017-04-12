@@ -18,10 +18,17 @@ package com.hubrick.vertx.kafka.consumer;
 import com.google.common.base.Strings;
 import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
 import com.hubrick.vertx.kafka.consumer.property.KafkaConsumerProperties;
+import com.hubrick.vertx.kafka.consumer.util.ThreadFactoryUtil;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Vert.x Module to read from a Kafka Topic.
@@ -31,18 +38,23 @@ import io.vertx.core.json.JsonObject;
  */
 public class KafkaConsumerVerticle extends AbstractVerticle {
 
-    private KafkaConsumerManager consumer;
-    private KafkaConsumerConfiguration configuration;
-    private String vertxAddress;
+    private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumerVerticle.class);
+
+    private static final ThreadFactory CONSUMER_WATCHER_THREAD = ThreadFactoryUtil.createThreadFactory("kafka-consumer-watcher-thread-%d", LOG);
+
+    private ExecutorService watcherExecutor = Executors.newSingleThreadExecutor(CONSUMER_WATCHER_THREAD);
+
+    private volatile KafkaConsumerManager consumer;
+
 
     @Override
     public void start() throws Exception {
         super.start();
 
         final JsonObject config = vertx.getOrCreateContext().config();
-        vertxAddress = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_VERTX_ADDRESS);
+        final String vertxAddress = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_VERTX_ADDRESS);
 
-        configuration = KafkaConsumerConfiguration.create(
+        final KafkaConsumerConfiguration configuration = KafkaConsumerConfiguration.create(
                 getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID),
                 getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_CLIENT_ID),
                 getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC),
@@ -62,8 +74,32 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getInteger(KafkaConsumerProperties.MAX_POLL_RECORDS, 500)
         );
 
-        consumer = KafkaConsumerManager.create(vertx, configuration, this::handler);
-        consumer.start();
+        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress));
+    }
+
+    private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration, final String vertxAddress) {
+        final java.util.concurrent.Future<?> future = startConsumerManager(configuration, vertxAddress);
+
+        try {
+            future.get();
+            LOG.info("{}: Consumer manager run loop has returned, restarting", configuration.getKafkaTopic());
+            stopConsumerManager();
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress));
+
+        } catch (InterruptedException e) {
+            LOG.info("{}: ConsumerManager got interrupted, returning", configuration.getKafkaTopic());
+            stopConsumerManager();
+            watcherExecutor.shutdownNow();
+        } catch (ExecutionException e) {
+            LOG.warn("{}: ExecutionException in consumer manager, restarting", configuration.getKafkaTopic(), e);
+            stopConsumerManager();
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress));
+        }
+    }
+
+    private java.util.concurrent.Future<?> startConsumerManager(final KafkaConsumerConfiguration configuration, final String vertxAddress) {
+        consumer = KafkaConsumerManager.create(vertx, configuration, makeHandler(configuration, vertxAddress));
+        return consumer.start();
     }
 
     private String getMandatoryStringConfig(final JsonObject jsonObject, final String key) {
@@ -74,24 +110,30 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
         return value;
     }
 
-    private void handler(final String message, final Future<Void> futureResult) {
-        final DeliveryOptions options = new DeliveryOptions();
-        options.setSendTimeout(configuration.getEventBusSendTimeout());
+    private KafkaConsumerHandler makeHandler(final KafkaConsumerConfiguration configuration, final String vertxAddress) {
+        return (message, futureResult) -> {
+            final DeliveryOptions options = new DeliveryOptions();
+            options.setSendTimeout(configuration.getEventBusSendTimeout());
 
-        vertx.eventBus().send(vertxAddress, message, options, (result) -> {
-            if (result.succeeded()) {
-                futureResult.complete();
-            } else {
-                futureResult.fail(result.cause());
-            }
-        });
+            vertx.eventBus().send(vertxAddress, message, options, (result) -> {
+                if (result.succeeded()) {
+                    futureResult.complete();
+                } else {
+                    futureResult.fail(result.cause());
+                }
+            });
+        };
     }
 
     @Override
     public void stop() throws Exception {
+        stopConsumerManager();
+        super.stop();
+    }
+
+    private void stopConsumerManager() {
         if (consumer != null) {
             consumer.stop();
         }
-        super.stop();
     }
 }
