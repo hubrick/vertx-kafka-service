@@ -26,6 +26,7 @@ Commit cycles will happen on any of the following conditions:
  * `maxUncommited` is reached, meaning that the difference between the last offset that was committed and the current offset is `maxUncommited`
  * The Kafka partition from which the consumer consumes is switched. In order to reduce the amount of commit cycles caused by this condition one should start a consumer per partition or disable this via `commitOnPartitionChange`.
  * `commitTimeoutMs` is reached, meaning the time between the last and the current message was bigger than last commit timeout in milliseconds. 
+ * The Kafka client rebalances, meaning that a new consumer was added to the group or one was removed.
  
 ## Vert.x Kafka Producer
 This service allows to receive events published by other Vert.x verticles and send those events to Kafka broker.

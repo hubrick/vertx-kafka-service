@@ -22,13 +22,16 @@ import com.hubrick.vertx.kafka.consumer.util.ThreadFactoryUtil;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Optional;
@@ -43,6 +46,7 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -69,10 +73,12 @@ class KafkaConsumerManager {
     };
     private final Set<Long> unacknowledgedOffsets = Collections.newSetFromMap(new ConcurrentHashMap<Long, Boolean>());
     private final AtomicLong lastCommittedOffset = new AtomicLong();
+    private final AtomicLong lastReadOffset = new AtomicLong();
     private final AtomicLong currentPartition = new AtomicLong(-1);
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
     private final Optional<RateLimiter> rateLimiter;
     private final AtomicBoolean waiting = new AtomicBoolean(false);
+    private final AtomicInteger lastPhase = new AtomicInteger(-1);
 
     public KafkaConsumerManager(Vertx vertx, KafkaConsumer<String,String> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
         this.vertx = vertx;
@@ -110,7 +116,25 @@ class KafkaConsumerManager {
 
     public java.util.concurrent.Future<?> start() {
         final String kafkaTopic = configuration.getKafkaTopic();
-        consumer.subscribe(Collections.singletonList(kafkaTopic));
+        consumer.subscribe(Collections.singletonList(kafkaTopic), new ConsumerRebalanceListener() {
+            @Override
+            public void onPartitionsRevoked(final Collection<TopicPartition> partitions) {
+                LOG.info("Partitions revoked");
+                if (lastPhase.get() == -1) {
+                    LOG.info("Nothing consumed yet, nothing to commit");
+                    return;
+                }
+                if (!waitForAcks(lastPhase.get())) {
+                    return;
+                }
+                commitOffsetsIfAllAcknowledged(lastReadOffset.get());
+                LOG.info("Commited on partitions revoked");
+            }
+
+            @Override
+            public void onPartitionsAssigned(final Collection<TopicPartition> partitions) {}
+
+        });
 
         return messageProcessorExececutor.submit(() -> read());
     }
@@ -123,11 +147,13 @@ class KafkaConsumerManager {
                 rateLimiter.ifPresent(limiter -> limiter.acquire());
 
                 final int phase = phaser.register();
+                lastPhase.set(phase);
 
                 final ConsumerRecord<String, String> msg = iterator.next();
                 final long offset = msg.offset();
                 final long partition = msg.partition();
                 unacknowledgedOffsets.add(offset);
+                lastReadOffset.set(offset);
                 lastCommittedOffset.compareAndSet(0, offset);
                 currentPartition.compareAndSet(-1, partition);
 
