@@ -119,16 +119,16 @@ class KafkaConsumerManager {
         consumer.subscribe(Collections.singletonList(kafkaTopic), new ConsumerRebalanceListener() {
             @Override
             public void onPartitionsRevoked(final Collection<TopicPartition> partitions) {
-                LOG.info("Partitions revoked");
+                LOG.info("{}: Partitions revoked", configuration.getKafkaTopic());
                 if (lastPhase.get() == -1) {
-                    LOG.info("Nothing consumed yet, nothing to commit");
+                    LOG.info("{}: Nothing consumed yet, nothing to commit", configuration.getKafkaTopic());
                     return;
                 }
                 if (!waitForAcks(lastPhase.get())) {
                     return;
                 }
                 commitOffsetsIfAllAcknowledged(lastReadOffset.get());
-                LOG.info("Commited on partitions revoked");
+                LOG.info("{}: Commited on partitions revoked", configuration.getKafkaTopic());
             }
 
             @Override
