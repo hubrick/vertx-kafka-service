@@ -15,6 +15,8 @@
  */
 package com.hubrick.vertx.kafka.consumer.config;
 
+import com.google.common.base.MoreObjects;
+
 /**
  * Configuration Options for the Kafka Consumer.
  *
@@ -180,5 +182,28 @@ public class KafkaConsumerConfiguration {
 
     public int getMaxPollRecords() {
         return maxPollRecords;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("clientId", clientId)
+                .add("groupId", groupId)
+                .add("kafkaTopic", kafkaTopic)
+                .add("bootstrapServers", bootstrapServers)
+                .add("offsetReset", offsetReset)
+                .add("maxUnacknowledged", maxUnacknowledged)
+                .add("maxUncommitedOffsets", maxUncommitedOffsets)
+                .add("ackTimeoutSeconds", ackTimeoutSeconds)
+                .add("commitTimeoutMs", commitTimeoutMs)
+                .add("maxRetries", maxRetries)
+                .add("initialRetryDelaySeconds", initialRetryDelaySeconds)
+                .add("maxRetryDelaySeconds", maxRetryDelaySeconds)
+                .add("eventBusSendTimeout", eventBusSendTimeout)
+                .add("messagesPerSecond", messagesPerSecond)
+                .add("commitOnPartitionChange", commitOnPartitionChange)
+                .add("strictOrderingEnabled", strictOrderingEnabled)
+                .add("maxPollRecords", maxPollRecords)
+                .toString();
     }
 }
