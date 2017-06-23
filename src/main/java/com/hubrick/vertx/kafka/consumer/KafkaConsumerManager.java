@@ -87,6 +87,8 @@ class KafkaConsumerManager {
         this.handler = handler;
         this.rateLimiter = configuration.getMessagesPerSecond() > 0.0D ?
                     Optional.of(RateLimiter.create(configuration.getMessagesPerSecond())) : Optional.empty();
+
+        LOG.info("Started Kafka Consumer Manager with the following configuration: {}", this.configuration);
     }
 
     public static KafkaConsumerManager create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler handler) {
