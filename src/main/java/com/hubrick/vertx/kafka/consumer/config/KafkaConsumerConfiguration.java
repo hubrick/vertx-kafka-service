@@ -16,6 +16,9 @@
 package com.hubrick.vertx.kafka.consumer.config;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+
+import java.util.List;
 
 /**
  * Configuration Options for the Kafka Consumer.
@@ -42,6 +45,8 @@ public class KafkaConsumerConfiguration {
     private final boolean commitOnPartitionChange;
     private final boolean strictOrderingEnabled;
     private final int maxPollRecords;
+    private final List<String> metricConsumerClasses;
+    private final String metricDropwizardRegistryName;
 
     private KafkaConsumerConfiguration(final String groupId,
                                        final String clientId,
@@ -59,7 +64,9 @@ public class KafkaConsumerConfiguration {
                                        final double messagesPerSecond,
                                        final boolean commitOnPartitionChange,
                                        final boolean strictOrderingEnabled,
-                                       final int maxPollRecords) {
+                                       final int maxPollRecords,
+                                       final List<String> metricConsumerClasses,
+                                       final String metricDropwizardRegistryName) {
         this.clientId = clientId;
         this.groupId = groupId;
         this.kafkaTopic = kafkaTopic;
@@ -77,6 +84,8 @@ public class KafkaConsumerConfiguration {
         this.commitOnPartitionChange = commitOnPartitionChange;
         this.strictOrderingEnabled = strictOrderingEnabled;
         this.maxPollRecords = maxPollRecords;
+        this.metricConsumerClasses = ImmutableList.copyOf(metricConsumerClasses);
+        this.metricDropwizardRegistryName = metricDropwizardRegistryName;
     }
 
     public static KafkaConsumerConfiguration create(final String groupId,
@@ -95,7 +104,9 @@ public class KafkaConsumerConfiguration {
                                                     final double messagesPerSecond,
                                                     final boolean commitOnPartitionChange,
                                                     final boolean strictOrderingEnabled,
-                                                    final int maxPollRecords) {
+                                                    final int maxPollRecords,
+                                                    final List<String> metricConsumerClasses,
+                                                    final String metricDropwizardRegistryName) {
         return new KafkaConsumerConfiguration(
                 groupId,
                 clilentId,
@@ -113,7 +124,9 @@ public class KafkaConsumerConfiguration {
                 messagesPerSecond,
                 commitOnPartitionChange,
                 strictOrderingEnabled,
-                maxPollRecords);
+                maxPollRecords,
+                metricConsumerClasses,
+                metricDropwizardRegistryName);
     }
 
     public String getGroupId() {
@@ -184,6 +197,14 @@ public class KafkaConsumerConfiguration {
         return maxPollRecords;
     }
 
+    public List<String> getMetricConsumerClasses() {
+        return metricConsumerClasses;
+    }
+
+    public String getMetricDropwizardRegistryName() {
+        return metricDropwizardRegistryName;
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
@@ -204,6 +225,8 @@ public class KafkaConsumerConfiguration {
                 .add("commitOnPartitionChange", commitOnPartitionChange)
                 .add("strictOrderingEnabled", strictOrderingEnabled)
                 .add("maxPollRecords", maxPollRecords)
+                .add("metricConsumerClasses", metricConsumerClasses)
+                .add("metricDropwizardRegistryName", metricDropwizardRegistryName)
                 .toString();
     }
 }

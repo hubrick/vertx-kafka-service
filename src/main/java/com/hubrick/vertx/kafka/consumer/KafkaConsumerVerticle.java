@@ -15,6 +15,7 @@
  */
 package com.hubrick.vertx.kafka.consumer;
 
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
 import com.hubrick.vertx.kafka.consumer.property.KafkaConsumerProperties;
@@ -39,6 +40,8 @@ import java.util.concurrent.ThreadFactory;
 public class KafkaConsumerVerticle extends AbstractVerticle {
 
     private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumerVerticle.class);
+
+    private static final Splitter COMMA_LIST_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private static final ThreadFactory CONSUMER_WATCHER_THREAD = ThreadFactoryUtil.createThreadFactory("kafka-consumer-watcher-thread-%d", LOG);
 
@@ -67,11 +70,13 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
                 config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 300),
-                config.getLong(KafkaConsumerProperties.EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
-                config.getDouble(KafkaConsumerProperties.MESSAGES_PER_SECOND, -1D),
-                config.getBoolean(KafkaConsumerProperties.COMMIT_ON_PARTITION_CHANGE, true),
-                config.getBoolean(KafkaConsumerProperties.STRICT_ORDERING, false),
-                config.getInteger(KafkaConsumerProperties.MAX_POLL_RECORDS, 500)
+                config.getLong(KafkaConsumerProperties.KEY_EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
+                config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D),
+                config.getBoolean(KafkaConsumerProperties.KEY_COMMIT_ON_PARTITION_CHANGE, true),
+                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, false),
+                config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500),
+                COMMA_LIST_SPLITTER.splitToList(config.getString(KafkaConsumerProperties.KEY_METRIC_CONSUMER_CLASSES, "")),
+                config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
         );
 
         watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress));
