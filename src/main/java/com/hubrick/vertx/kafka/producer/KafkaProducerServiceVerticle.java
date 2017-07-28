@@ -15,6 +15,7 @@
  */
 package com.hubrick.vertx.kafka.producer;
 
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.hubrick.vertx.kafka.producer.config.KafkaProducerConfiguration;
 import com.hubrick.vertx.kafka.producer.config.ProducerType;
@@ -23,20 +24,42 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.json.JsonObject;
 import io.vertx.serviceproxy.ProxyHelper;
 
-import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.*;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.ACKS;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.ACKS_DEFAULT;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.ADDRESS;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.BATCH_MESSAGE_NUM;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.BOOTSTRAP_SERVERS;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.BOOTSTRAP_SERVERS_DEFAULT;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.BUFFERING_MAX_MESSAGES;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.BUFFERING_MAX_MS;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.DEFAULT_TOPIC;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.ENQUEUE_TIMEOUT;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.MAX_BLOCK_MS;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.MAX_BLOCK_MS_DEFAULT;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.MAX_RETRIES;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.METRIC_CONSUMER_CLASSES;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.METRIC_DROPWIZARD_REGISTRY_NAME;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.REQUEST_TIMEOUT_MS;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.REQUEST_TIMEOUT_MS_DEFAULT;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.RETRIES;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.RETRIES_DEFAULT;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.RETRY_BACKOFF_MS;
 import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.STATSD;
-import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.HOST_DEFAULT;
-import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.PORT_DEFAULT;
-import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.PREFIX_DEFAULT;
+import static com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties.TYPE;
 import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.HOST;
+import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.HOST_DEFAULT;
 import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.PORT;
+import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.PORT_DEFAULT;
 import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.PREFIX;
+import static com.hubrick.vertx.kafka.producer.property.StatsDProperties.PREFIX_DEFAULT;
 
 /**
  * @author Emir Dizdarevic
  * @since 1.0.0
  */
 public class KafkaProducerServiceVerticle extends AbstractVerticle {
+
+    private static final Splitter COMMA_LIST_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private KafkaProducerService kafkaProducerService;
 
@@ -70,7 +93,9 @@ public class KafkaProducerServiceVerticle extends AbstractVerticle {
                 config().getString(ACKS, ACKS_DEFAULT),
                 config().getInteger(RETRIES, RETRIES_DEFAULT),
                 config().getInteger(REQUEST_TIMEOUT_MS, REQUEST_TIMEOUT_MS_DEFAULT),
-                config().getInteger(MAX_BLOCK_MS, MAX_BLOCK_MS_DEFAULT));
+                config().getInteger(MAX_BLOCK_MS, MAX_BLOCK_MS_DEFAULT),
+                COMMA_LIST_SPLITTER.splitToList(config().getString(METRIC_CONSUMER_CLASSES, "")),
+                config().getString(METRIC_DROPWIZARD_REGISTRY_NAME));
         kafkaProducerConfiguration.setStatsDConfiguration(statsDConfiguration);
 
         final String type = config().getString(TYPE);

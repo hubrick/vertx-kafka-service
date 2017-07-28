@@ -23,7 +23,9 @@ package com.hubrick.vertx.kafka.consumer.property;
  */
 public final class KafkaConsumerProperties {
 
+
     private KafkaConsumerProperties() {}
+
 
     public static final String KEY_VERTX_ADDRESS = "address";
 
@@ -39,9 +41,12 @@ public final class KafkaConsumerProperties {
     public static final String KEY_MAX_RETRIES = "maxRetries";
     public static final String KEY_INITIAL_RETRY_DELAY_SECONDS = "initialRetryDelaySeconds";
     public static final String KEY_MAX_RETRY_DELAY_SECONDS = "maxRetryDelaySeconds";
-    public static final String EVENT_BUS_SEND_TIMEOUT = "eventBusSendTimeout";
-    public static final String MESSAGES_PER_SECOND = "messagesPerSecond";
-    public static final String COMMIT_ON_PARTITION_CHANGE = "commitOnPartitionChange";
-    public static final String STRICT_ORDERING = "strictOrdering";
-    public static final String MAX_POLL_RECORDS = "maxPollRecords";
+    public static final String KEY_EVENT_BUS_SEND_TIMEOUT = "eventBusSendTimeout";
+    public static final String KEY_MESSAGES_PER_SECOND = "messagesPerSecond";
+    public static final String KEY_COMMIT_ON_PARTITION_CHANGE = "commitOnPartitionChange";
+    public static final String KEY_STRICT_ORDERING = "strictOrdering";
+    public static final String KEY_MAX_POLL_RECORDS = "maxPollRecords";
+    public static final String KEY_METRIC_CONSUMER_CLASSES = "metricConsumerClasses";
+    public static final String KEY_METRIC_DROPWIZARD_REGISTRY_NAME = "metricDropwizardRegistryName";
+
 }

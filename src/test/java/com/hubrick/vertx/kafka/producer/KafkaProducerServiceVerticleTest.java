@@ -64,7 +64,9 @@ public class KafkaProducerServiceVerticleTest {
             "1",
             KafkaProducerProperties.RETRIES_DEFAULT,
             KafkaProducerProperties.REQUEST_TIMEOUT_MS_DEFAULT,
-            KafkaProducerProperties.MAX_BLOCK_MS_DEFAULT);
+            KafkaProducerProperties.MAX_BLOCK_MS_DEFAULT,
+            null,
+            null);
 
     @Mock
     private StatsDClient statsDClient;

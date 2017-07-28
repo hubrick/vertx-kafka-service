@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 
 /**
@@ -128,7 +127,7 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
      */
     private Producer getOrCreateProducer(MessageSerializerType messageSerializerType) {
         if (producers.get(messageSerializerType) == null) {
-            final Properties props = new Properties();
+            final Map<String,Object> props = new HashMap<>();
             props.put("producer.type", kafkaProducerConfiguration.getType().getValue());
             props.put("message.send.max.retries", kafkaProducerConfiguration.getMaxRetries().toString());
             props.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, kafkaProducerConfiguration.getRetryBackoffMs().toString());
@@ -143,6 +142,8 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
             props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaProducerConfiguration.getRequestTimeoutMs());
             props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName()); // always use String serializer for the key
             props.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, kafkaProducerConfiguration.getMaxBlockTimeMs());
+            props.put(ProducerConfig.METRIC_REPORTER_CLASSES_CONFIG, kafkaProducerConfiguration.getMetricConsumerClasses());
+            props.put("metric.dropwizard.registry", String.valueOf(kafkaProducerConfiguration.getMetricDropwizardRegistryName()));
 
             producers.put(messageSerializerType, new KafkaProducer(props));
         }

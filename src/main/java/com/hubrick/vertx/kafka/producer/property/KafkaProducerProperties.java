@@ -39,6 +39,8 @@ public final class KafkaProducerProperties {
     public static final String REQUEST_TIMEOUT_MS = "requestTimeoutMs";
     public static final String MAX_BLOCK_MS = "maxBlockMs";
     public static final String STATSD = "statsD";
+    public static final String METRIC_CONSUMER_CLASSES = "metricConsumerClasses";
+    public static final String METRIC_DROPWIZARD_REGISTRY_NAME = "metricDropwizardRegistryName";
 
     public static final String BOOTSTRAP_SERVERS_DEFAULT = "localhost:9092";
     public static final String ACKS_DEFAULT = "1";

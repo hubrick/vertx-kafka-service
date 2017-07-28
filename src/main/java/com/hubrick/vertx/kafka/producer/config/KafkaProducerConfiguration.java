@@ -15,6 +15,11 @@
  */
 package com.hubrick.vertx.kafka.producer.config;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+
+import java.util.List;
+
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -39,12 +44,17 @@ public class KafkaProducerConfiguration {
     private Integer batchMessageNum = 200;
     private StatsDConfiguration statsDConfiguration;
 
+    private final List<String> metricConsumerClasses;
+    private final String metricDropwizardRegistryName;
+
     public KafkaProducerConfiguration(String defaultTopic,
                                       String bootstrapServers,
                                       String acks,
                                       int retries,
                                       int requestTimeoutMs,
-                                      int maxBlockTimeMs) {
+                                      int maxBlockTimeMs,
+                                      final List<String> metricConsumerClasses,
+                                      final String metricDropwizardRegistryName) {
         checkNotNull(defaultTopic, "defaultTopic must not be null");
         checkNotNull(bootstrapServers, "bootstrapServers must not be null");
         checkNotNull(acks, "acks must not be null");
@@ -59,6 +69,8 @@ public class KafkaProducerConfiguration {
         this.maxRetries = retries;
         this.requestTimeoutMs = requestTimeoutMs;
         this.maxBlockTimeMs = maxBlockTimeMs;
+        this.metricConsumerClasses = ImmutableList.copyOf(MoreObjects.firstNonNull(metricConsumerClasses, ImmutableList.of()));
+        this.metricDropwizardRegistryName = metricDropwizardRegistryName;
     }
 
     public String getDefaultTopic() {
@@ -154,5 +166,13 @@ public class KafkaProducerConfiguration {
 
     public int getMaxBlockTimeMs() {
         return maxBlockTimeMs;
+    }
+
+    public List<String> getMetricConsumerClasses() {
+        return metricConsumerClasses;
+    }
+
+    public String getMetricDropwizardRegistryName() {
+        return metricDropwizardRegistryName;
     }
 }

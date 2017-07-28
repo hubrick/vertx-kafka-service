@@ -33,9 +33,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,20 +93,22 @@ class KafkaConsumerManager {
     }
 
     public static KafkaConsumerManager create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler handler) {
-        final Properties properties = createProperties(configuration);
+        final Map<String, Object> properties = createProperties(configuration);
         final KafkaConsumer consumer = new KafkaConsumer(properties, new StringDeserializer(), new StringDeserializer());
         return new KafkaConsumerManager(vertx, consumer, configuration, handler);
     }
 
-    protected static Properties createProperties(KafkaConsumerConfiguration configuration) {
-        final Properties properties = new Properties();
+    protected static Map<String, Object> createProperties(KafkaConsumerConfiguration configuration) {
+        final Map<String, Object> properties = new HashMap<>();
 
-        properties.setProperty(ConsumerConfig.CLIENT_ID_CONFIG, configuration.getClientId());
-        properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
-        properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, configuration.getGroupId());
-        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Boolean.FALSE.toString());
-        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configuration.getOffsetReset());
-        properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(configuration.getMaxPollRecords()));
+        properties.put(ConsumerConfig.CLIENT_ID_CONFIG, configuration.getClientId());
+        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
+        properties.put(ConsumerConfig.GROUP_ID_CONFIG, configuration.getGroupId());
+        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Boolean.FALSE.toString());
+        properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configuration.getOffsetReset());
+        properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(configuration.getMaxPollRecords()));
+        properties.put(ConsumerConfig.METRIC_REPORTER_CLASSES_CONFIG, configuration.getMetricConsumerClasses());
+        properties.put("metric.dropwizard.registry", String.valueOf(configuration.getMetricDropwizardRegistryName()));
 
         return properties;
     }
