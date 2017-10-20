@@ -42,7 +42,7 @@
         <arguments />
 
         <!-- Dependency Versions -->
-        <kafka.version>0.11.0.0</kafka.version>
+        <kafka.version>0.11.0.1</kafka.version>
         <vertx.version>3.4.2</vertx.version>
         <guava.version>22.0</guava.version>
         <metrics-core.version>2.2.0</metrics-core.version>
