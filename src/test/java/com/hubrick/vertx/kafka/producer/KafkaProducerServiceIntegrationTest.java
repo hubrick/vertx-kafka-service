@@ -43,7 +43,7 @@ import kafka.utils.ZKStringSerializer$;
 import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
-import org.apache.kafka.common.protocol.SecurityProtocol;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -149,7 +149,7 @@ public class KafkaProducerServiceIntegrationTest extends AbstractVertxTest {
     }
 
     private KafkaServer startKafkaServer() {
-        Properties props = TestUtils.createBrokerConfig(0, zookeeper.getConnectString(), true, true, 9092, Option.<SecurityProtocol>empty(), Option.<File>empty(), Option.<Properties>empty(), true, false, 0, false, 0, false, 0, Option.<String>empty());
+        Properties props = TestUtils.createBrokerConfig(0, zookeeper.getConnectString(), true, true, 9092, Option.<SecurityProtocol>empty(), Option.<File>empty(), Option.<Properties>empty(), true, false, 0, false, 0, false, 0, Option.<String>empty(), 0);
         props.put(KafkaConfig.ZkConnectProp(), zookeeper.getConnectString());
         kafkaServer = TestUtils.createServer(new KafkaConfig(props), new kafka.utils.MockTime());
         return kafkaServer;
