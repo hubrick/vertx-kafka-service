@@ -44,11 +44,11 @@
         <!-- Dependency Versions -->
         <kafka.version>1.0.0</kafka.version>
         <vertx.version>3.4.2</vertx.version>
-        <guava.version>22.0</guava.version>
+        <guava.version>23.4-jre</guava.version>
         <metrics-core.version>2.2.0</metrics-core.version>
         <metrics-graphite.version>2.2.0</metrics-graphite.version>
         <java-statsd-client.version>3.0.1</java-statsd-client.version>
-        <junit-toolbox.version>2.2</junit-toolbox.version>
+        <junit-toolbox.version>2.4</junit-toolbox.version>
         <slf4j.version>1.7.25</slf4j.version>
 
         <!--Plugin versions-->
