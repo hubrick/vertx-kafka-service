@@ -119,7 +119,13 @@ class KafkaConsumerManager {
         consumer.close();
     }
 
-    public java.util.concurrent.Future<?> start() {
+    /**
+     * Starts the message consuming loop.
+     *
+     * @param startedFuture to try to complete once the message consuming loop started
+     * @return Future that completes if the message consuming loop exited
+     */
+    public java.util.concurrent.Future<?> start(final Future<Void> startedFuture) {
         final String kafkaTopic = configuration.getKafkaTopic();
         consumer.subscribe(Collections.singletonList(kafkaTopic), new ConsumerRebalanceListener() {
             @Override
@@ -141,7 +147,10 @@ class KafkaConsumerManager {
 
         });
 
-        return messageProcessorExececutor.submit(() -> read());
+        return messageProcessorExececutor.submit(() -> {
+            startedFuture.tryComplete();
+            read();
+        });
     }
 
     private void read() {
