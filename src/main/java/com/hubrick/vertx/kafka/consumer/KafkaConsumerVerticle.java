@@ -21,6 +21,7 @@ import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
 import com.hubrick.vertx.kafka.consumer.property.KafkaConsumerProperties;
 import com.hubrick.vertx.kafka.consumer.util.ThreadFactoryUtil;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
@@ -51,9 +52,7 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
 
 
     @Override
-    public void start() throws Exception {
-        super.start();
-
+    public void start(final Future<Void> startedFuture) throws Exception {
         final JsonObject config = vertx.getOrCreateContext().config();
         final String vertxAddress = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_VERTX_ADDRESS);
 
@@ -79,17 +78,19 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
         );
 
-        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress));
+        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
     }
 
-    private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration, final String vertxAddress) {
-        final java.util.concurrent.Future<?> future = startConsumerManager(configuration, vertxAddress);
+    private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration,
+                                           final String vertxAddress,
+                                           final Future<Void> startedFuture) {
+        final java.util.concurrent.Future<?> future = startConsumerManager(configuration, vertxAddress, startedFuture);
 
         try {
             future.get();
             LOG.info("{}: Consumer manager run loop has returned, restarting", configuration.getKafkaTopic());
             stopConsumerManager();
-            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress));
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
 
         } catch (InterruptedException e) {
             LOG.info("{}: ConsumerManager got interrupted, returning", configuration.getKafkaTopic());
@@ -98,13 +99,15 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
         } catch (ExecutionException e) {
             LOG.warn("{}: ExecutionException in consumer manager, restarting", configuration.getKafkaTopic(), e);
             stopConsumerManager();
-            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress));
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
         }
     }
 
-    private java.util.concurrent.Future<?> startConsumerManager(final KafkaConsumerConfiguration configuration, final String vertxAddress) {
+    private java.util.concurrent.Future<?> startConsumerManager(final KafkaConsumerConfiguration configuration,
+                                                                final String vertxAddress,
+                                                                final Future<Void> startedFuture) {
         consumer = KafkaConsumerManager.create(vertx, configuration, makeHandler(configuration, vertxAddress));
-        return consumer.start();
+        return consumer.start(startedFuture);
     }
 
     private String getMandatoryStringConfig(final JsonObject jsonObject, final String key) {
