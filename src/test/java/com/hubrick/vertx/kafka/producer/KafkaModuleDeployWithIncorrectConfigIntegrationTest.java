@@ -29,7 +29,7 @@ import org.junit.runner.RunWith;
  * Then verifies that deployment of module fails with a message, that missing parameter should be specified.
  */
 @RunWith(VertxUnitRunner.class)
-public class KafkaModuleDeployWithIncorrectConfigIntegrationTest extends AbstractVertxTest {
+public class KafkaModuleDeployWithIncorrectConfigIntegrationTest extends AbstractProducerTest {
 
     private static final String TOPIC = "some-topic";
 

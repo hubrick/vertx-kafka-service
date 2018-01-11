@@ -24,6 +24,8 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
+import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.errors.RetriableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,14 +86,12 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
     private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration,
                                            final String vertxAddress,
                                            final Future<Void> startedFuture) {
-        final java.util.concurrent.Future<?> future = startConsumerManager(configuration, vertxAddress, startedFuture);
-
         try {
+            final java.util.concurrent.Future<?> future = startConsumerManager(configuration, vertxAddress, startedFuture);
             future.get();
             LOG.info("{}: Consumer manager run loop has returned, restarting", configuration.getKafkaTopic());
             stopConsumerManager();
             watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
-
         } catch (InterruptedException e) {
             LOG.info("{}: ConsumerManager got interrupted, returning", configuration.getKafkaTopic());
             stopConsumerManager();
@@ -100,6 +100,15 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
             LOG.warn("{}: ExecutionException in consumer manager, restarting", configuration.getKafkaTopic(), e);
             stopConsumerManager();
             watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+        } catch (RetriableException e) {
+            LOG.warn("{}: RetriableException in consumer manager, restarting", configuration.getKafkaTopic(), e);
+            stopConsumerManager();
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+        } catch (KafkaException e) {
+            LOG.error("{}: KafkaException in consumer manager, returning", configuration.getKafkaTopic(), e);
+            stopConsumerManager();
+            watcherExecutor.shutdownNow();
+            startedFuture.tryFail(e);
         }
     }
 
