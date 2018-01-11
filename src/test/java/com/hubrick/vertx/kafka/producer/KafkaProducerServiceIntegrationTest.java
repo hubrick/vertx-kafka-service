@@ -66,7 +66,7 @@ import static org.junit.Assert.assertThat;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class KafkaProducerServiceIntegrationTest extends AbstractVertxTest {
+public class KafkaProducerServiceIntegrationTest extends AbstractProducerTest {
 
     private static final String ADDRESS = "default-address";
     private static final String TOPIC = "some-topic";

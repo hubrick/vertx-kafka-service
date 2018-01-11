@@ -31,7 +31,7 @@ import org.junit.runner.RunWith;
  * Tests mod-kafka module with String serializer configuration.
  */
 @RunWith(VertxUnitRunner.class)
-public class StringSerializerIntegrationTest extends AbstractVertxTest {
+public class StringSerializerIntegrationTest extends AbstractProducerTest {
 
     private static final String ADDRESS = "default-address";
     private static final String TOPIC = "some-topic";

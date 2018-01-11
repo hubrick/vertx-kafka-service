@@ -15,26 +15,17 @@
  */
 package com.hubrick.vertx.kafka.producer;
 
+import com.hubrick.vertx.kafka.AbstractVertxTest;
 import com.hubrick.vertx.kafka.producer.property.KafkaProducerProperties;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import kafka.Kafka;
-import org.junit.After;
-import org.junit.Before;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Emir Dizdarevic
  * @since 1.0.0
  */
-public abstract class AbstractVertxTest {
+public abstract class AbstractProducerTest extends AbstractVertxTest {
 
     protected static String SERVICE_NAME = "service:com.hubrick.services.kafka-producer";
-    protected Vertx vertx;
 
     static JsonObject makeDefaultConfig() {
         JsonObject config = new JsonObject();
@@ -46,26 +37,8 @@ public abstract class AbstractVertxTest {
         return config;
     }
 
-    @Before
-    public final void init(TestContext testContext) throws Exception {
-        vertx = Vertx.vertx();
-    }
-
-    @After
-    public final void destroy() throws Exception {
-        vertx.close();
-    }
-
-    protected void deploy(TestContext testContext, DeploymentOptions deploymentOptions) throws InterruptedException {
-        CountDownLatch latch = new CountDownLatch(1);
-        vertx.deployVerticle(SERVICE_NAME, deploymentOptions, result -> {
-            if (result.failed()) {
-                result.cause().printStackTrace();
-                testContext.fail();
-            }
-            latch.countDown();
-        });
-
-        latch.await(30, TimeUnit.SECONDS);
+    @Override
+    protected String getServiceName() {
+        return SERVICE_NAME;
     }
 }

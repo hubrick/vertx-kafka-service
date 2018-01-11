@@ -38,7 +38,7 @@ import org.junit.runner.RunWith;
  * until the point, where message is sent to Kafka.
  */
 @RunWith(VertxUnitRunner.class)
-public class KafkaModuleDeployWithStatsdEnabledConfigIntegrationTest extends AbstractVertxTest {
+public class KafkaModuleDeployWithStatsdEnabledConfigIntegrationTest extends AbstractProducerTest {
 
     private static final String ADDRESS = "default-address";
     private static final String MESSAGE = "Test message from KafkaModuleDeployWithStatsdEnabledConfigIT!";

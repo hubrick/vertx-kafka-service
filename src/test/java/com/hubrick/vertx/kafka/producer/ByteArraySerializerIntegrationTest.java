@@ -33,7 +33,7 @@ import org.junit.runner.RunWith;
  * Tests mod-kafka module with byte array serializer configuration.
  */
 @RunWith(VertxUnitRunner.class)
-public class ByteArraySerializerIntegrationTest extends AbstractVertxTest {
+public class ByteArraySerializerIntegrationTest extends AbstractProducerTest {
 
     private static final String ADDRESS = "default-address";
     private static final String MESSAGE = "Test bytes message!";
