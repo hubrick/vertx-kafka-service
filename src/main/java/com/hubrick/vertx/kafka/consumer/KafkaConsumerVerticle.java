@@ -58,29 +58,43 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
         final JsonObject config = vertx.getOrCreateContext().config();
         final String vertxAddress = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_VERTX_ADDRESS);
 
-        final KafkaConsumerConfiguration configuration = KafkaConsumerConfiguration.create(
-                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID),
-                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_CLIENT_ID),
-                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC),
-                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_BOOTSTRAP_SERVERS),
-                config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "latest"),
-                config.getInteger(KafkaConsumerProperties.KEY_MAX_UNACKNOWLEDGED, 100),
-                config.getLong(KafkaConsumerProperties.KEY_MAX_UNCOMMITTED_OFFSETS, 1000L),
-                config.getLong(KafkaConsumerProperties.KEY_ACK_TIMEOUT_SECONDS, 240L),
-                config.getLong(KafkaConsumerProperties.KEY_COMMIT_TIMEOUT_MS, 5 * 60 * 1000L),
-                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
-                config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
-                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 300),
-                config.getLong(KafkaConsumerProperties.KEY_EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
-                config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D),
-                config.getBoolean(KafkaConsumerProperties.KEY_COMMIT_ON_PARTITION_CHANGE, true),
-                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, false),
-                config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500),
-                COMMA_LIST_SPLITTER.splitToList(config.getString(KafkaConsumerProperties.KEY_METRIC_CONSUMER_CLASSES, "")),
-                config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
-        );
+        final String clientIdPrefix = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_CLIENT_ID);
 
-        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+        vertx.sharedData().getCounter(clientIdPrefix, counter -> {
+            if (counter.failed()) {
+                startedFuture.fail(counter.cause());
+            } else {
+                counter.result().getAndIncrement(value -> {
+                    if (value.failed()) {
+                        startedFuture.fail(value.cause());
+                    } else {
+                        final KafkaConsumerConfiguration configuration = KafkaConsumerConfiguration.create(
+                                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID),
+                                clientIdPrefix + "-" + value.result(),
+                                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC),
+                                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_BOOTSTRAP_SERVERS),
+                                config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "latest"),
+                                config.getInteger(KafkaConsumerProperties.KEY_MAX_UNACKNOWLEDGED, 100),
+                                config.getLong(KafkaConsumerProperties.KEY_MAX_UNCOMMITTED_OFFSETS, 1000L),
+                                config.getLong(KafkaConsumerProperties.KEY_ACK_TIMEOUT_SECONDS, 240L),
+                                config.getLong(KafkaConsumerProperties.KEY_COMMIT_TIMEOUT_MS, 5 * 60 * 1000L),
+                                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
+                                config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
+                                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 300),
+                                config.getLong(KafkaConsumerProperties.KEY_EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
+                                config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D),
+                                config.getBoolean(KafkaConsumerProperties.KEY_COMMIT_ON_PARTITION_CHANGE, true),
+                                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, false),
+                                config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500),
+                                COMMA_LIST_SPLITTER.splitToList(config.getString(KafkaConsumerProperties.KEY_METRIC_CONSUMER_CLASSES, "")),
+                                config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
+                        );
+
+                        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+                    }
+                });
+            }
+        });
     }
 
     private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration,
