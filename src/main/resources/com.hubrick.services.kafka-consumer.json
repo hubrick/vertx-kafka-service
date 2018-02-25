@@ -1,3 +1,6 @@
 {
-    "main": "com.hubrick.vertx.kafka.consumer.KafkaConsumerVerticle"
+    "main": "com.hubrick.vertx.kafka.consumer.KafkaConsumerVerticle",
+    "options": {
+        "worker": true
+    }
 }
