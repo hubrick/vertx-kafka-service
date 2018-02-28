@@ -80,6 +80,7 @@ class KafkaConsumerManager {
     private final Optional<RateLimiter> rateLimiter;
     private final AtomicBoolean waiting = new AtomicBoolean(false);
     private final AtomicInteger lastPhase = new AtomicInteger(-1);
+    private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
     public KafkaConsumerManager(Vertx vertx, KafkaConsumer<String,String> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
         this.vertx = vertx;
@@ -114,7 +115,11 @@ class KafkaConsumerManager {
     }
 
     public void stop() {
+        shutdownRequested.set(true);
         messageProcessorExececutor.shutdownNow();
+    }
+
+    private void executeStopConsumer() {
         consumer.unsubscribe();
         consumer.close();
     }
@@ -149,15 +154,27 @@ class KafkaConsumerManager {
 
         return messageProcessorExececutor.submit(() -> {
             startedFuture.tryComplete();
-            read();
+            try {
+                read();
+            } catch (final Exception e) {
+                executeStopConsumer();
+                throw new RuntimeException(e);
+            }
         });
     }
 
     private void read() {
         while (!consumer.subscription().isEmpty()) {
             final ConsumerRecords<String, String> records = consumer.poll(60000);
+            if (shutdownRequested.get()) {
+                executeStopConsumer();
+            }
             final Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
             while (iterator.hasNext()) {
+                if (shutdownRequested.get()) {
+                    executeStopConsumer();
+                    return;
+                }
                 rateLimiter.ifPresent(limiter -> limiter.acquire());
 
                 final int phase = phaser.register();
@@ -304,6 +321,10 @@ class KafkaConsumerManager {
     }
 
     private boolean waitForAcks(int phase) {
+        if (shutdownRequested.get()) {
+            executeStopConsumer();
+            return false;
+        }
         try {
             waiting.set(true);
             phaser.awaitAdvanceInterruptibly(phase, configuration.getAckTimeoutSeconds(), TimeUnit.SECONDS);
