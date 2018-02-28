@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Vert.x Module to read from a Kafka Topic.
@@ -42,7 +43,9 @@ import java.util.concurrent.ThreadFactory;
  */
 public class KafkaConsumerVerticle extends AbstractVerticle {
 
-    private final static Logger LOG = LoggerFactory.getLogger(KafkaConsumerVerticle.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaConsumerVerticle.class);
+
+    private static final AtomicLong INSTANCE_COUNTER = new AtomicLong();
 
     private static final Splitter COMMA_LIST_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
@@ -60,41 +63,29 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
 
         final String clientIdPrefix = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_CLIENT_ID);
 
-        vertx.sharedData().getCounter(clientIdPrefix, counter -> {
-            if (counter.failed()) {
-                startedFuture.fail(counter.cause());
-            } else {
-                counter.result().getAndIncrement(value -> {
-                    if (value.failed()) {
-                        startedFuture.fail(value.cause());
-                    } else {
-                        final KafkaConsumerConfiguration configuration = KafkaConsumerConfiguration.create(
-                                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID),
-                                clientIdPrefix + "-" + value.result(),
-                                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC),
-                                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_BOOTSTRAP_SERVERS),
-                                config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "latest"),
-                                config.getInteger(KafkaConsumerProperties.KEY_MAX_UNACKNOWLEDGED, 100),
-                                config.getLong(KafkaConsumerProperties.KEY_MAX_UNCOMMITTED_OFFSETS, 1000L),
-                                config.getLong(KafkaConsumerProperties.KEY_ACK_TIMEOUT_SECONDS, 240L),
-                                config.getLong(KafkaConsumerProperties.KEY_COMMIT_TIMEOUT_MS, 5 * 60 * 1000L),
-                                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
-                                config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
-                                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 300),
-                                config.getLong(KafkaConsumerProperties.KEY_EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
-                                config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D),
-                                config.getBoolean(KafkaConsumerProperties.KEY_COMMIT_ON_PARTITION_CHANGE, true),
-                                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, false),
-                                config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500),
-                                COMMA_LIST_SPLITTER.splitToList(config.getString(KafkaConsumerProperties.KEY_METRIC_CONSUMER_CLASSES, "")),
-                                config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
-                        );
+        final KafkaConsumerConfiguration configuration = KafkaConsumerConfiguration.create(
+                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID),
+                clientIdPrefix + "-" + INSTANCE_COUNTER.getAndIncrement(),
+                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC),
+                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_BOOTSTRAP_SERVERS),
+                config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "latest"),
+                config.getInteger(KafkaConsumerProperties.KEY_MAX_UNACKNOWLEDGED, 100),
+                config.getLong(KafkaConsumerProperties.KEY_MAX_UNCOMMITTED_OFFSETS, 1000L),
+                config.getLong(KafkaConsumerProperties.KEY_ACK_TIMEOUT_SECONDS, 240L),
+                config.getLong(KafkaConsumerProperties.KEY_COMMIT_TIMEOUT_MS, 5 * 60 * 1000L),
+                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
+                config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
+                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 300),
+                config.getLong(KafkaConsumerProperties.KEY_EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
+                config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D),
+                config.getBoolean(KafkaConsumerProperties.KEY_COMMIT_ON_PARTITION_CHANGE, true),
+                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, false),
+                config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500),
+                COMMA_LIST_SPLITTER.splitToList(config.getString(KafkaConsumerProperties.KEY_METRIC_CONSUMER_CLASSES, "")),
+                config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
+        );
 
-                        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
-                    }
-                });
-            }
-        });
+        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
     }
 
     private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration,
