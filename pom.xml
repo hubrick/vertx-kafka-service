@@ -123,6 +123,11 @@
             <artifactId>java-statsd-client</artifactId>
             <version>${java-statsd-client.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient</artifactId>
+            <version>0.3.0</version>
+        </dependency>
 
         <!-- Test dependencies -->
         <dependency>

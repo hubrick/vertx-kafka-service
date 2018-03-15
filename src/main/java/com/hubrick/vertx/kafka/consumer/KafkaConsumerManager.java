@@ -18,6 +18,7 @@ package com.hubrick.vertx.kafka.consumer;
 import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.RateLimiter;
 import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
+import com.hubrick.vertx.kafka.consumer.util.PrometheusMetrics;
 import com.hubrick.vertx.kafka.consumer.util.ThreadFactoryUtil;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -78,25 +79,34 @@ class KafkaConsumerManager {
     private final AtomicLong currentPartition = new AtomicLong(-1);
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
     private final Optional<RateLimiter> rateLimiter;
+    private PrometheusMetrics prometheusMetrics;
     private final AtomicBoolean waiting = new AtomicBoolean(false);
     private final AtomicInteger lastPhase = new AtomicInteger(-1);
     private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
-    public KafkaConsumerManager(Vertx vertx, KafkaConsumer<String,String> consumer, KafkaConsumerConfiguration configuration, KafkaConsumerHandler handler) {
+    public KafkaConsumerManager(final Vertx vertx,
+                                final KafkaConsumer<String, String> consumer,
+                                final KafkaConsumerConfiguration configuration,
+                                final KafkaConsumerHandler handler,
+                                final PrometheusMetrics prometheusMetrics) {
         this.vertx = vertx;
         this.consumer = consumer;
         this.configuration = configuration;
         this.handler = handler;
         this.rateLimiter = configuration.getMessagesPerSecond() > 0.0D ?
                     Optional.of(RateLimiter.create(configuration.getMessagesPerSecond())) : Optional.empty();
+        this.prometheusMetrics = prometheusMetrics;
 
         LOG.info("Started Kafka Consumer Manager with the following configuration: {}", this.configuration);
     }
 
-    public static KafkaConsumerManager create(final Vertx vertx, final KafkaConsumerConfiguration configuration, final KafkaConsumerHandler handler) {
+    public static KafkaConsumerManager create(final Vertx vertx,
+                                              final KafkaConsumerConfiguration configuration,
+                                              final PrometheusMetrics prometheusMetrics,
+                                              final KafkaConsumerHandler handler) {
         final Map<String, Object> properties = createProperties(configuration);
         final KafkaConsumer consumer = new KafkaConsumer(properties, new StringDeserializer(), new StringDeserializer());
-        return new KafkaConsumerManager(vertx, consumer, configuration, handler);
+        return new KafkaConsumerManager(vertx, consumer, configuration, handler, prometheusMetrics);
     }
 
     protected static Map<String, Object> createProperties(KafkaConsumerConfiguration configuration) {
@@ -176,6 +186,7 @@ class KafkaConsumerManager {
                     return;
                 }
                 rateLimiter.ifPresent(limiter -> limiter.acquire());
+                final PrometheusMetrics.InProgressMessage inProgressMessage = prometheusMetrics.messageStarted();
 
                 final int phase = phaser.register();
                 lastPhase.set(phase);
@@ -188,7 +199,7 @@ class KafkaConsumerManager {
                 lastCommittedOffset.compareAndSet(0, offset);
                 currentPartition.compareAndSet(-1, partition);
 
-                handle(msg.value(), partition, offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds());
+                handle(msg.value(), partition, offset, configuration.getMaxRetries(), configuration.getInitialRetryDelaySeconds(), inProgressMessage);
 
                 if (unacknowledgedOffsets.size() >= configuration.getMaxUnacknowledged()
                         || partititionChanged(partition)
@@ -208,7 +219,12 @@ class KafkaConsumerManager {
         LOG.info("{}: ConsumerManager:read exited loop, consuming of messages has ended.", configuration.getKafkaTopic());
     }
 
-    private void handle(String msg, Long partition, Long offset, int tries, int delaySeconds) {
+    private void handle(final String msg,
+                        final Long partition,
+                        final Long offset,
+                        final int tries,
+                        final int delaySeconds,
+                        final PrometheusMetrics.InProgressMessage inProgressMessage) {
         final Future<Void> futureResult = Future.future();
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
 
@@ -230,6 +246,7 @@ class KafkaConsumerManager {
                             msg
                     );
                 }
+                inProgressMessage.finished();
 
             } else {
                 completableFuture.completeExceptionally(result.cause());
@@ -244,7 +261,7 @@ class KafkaConsumerManager {
                                 msg,
                                 result.cause());
 
-                        vertx.setTimer(delaySeconds * 1000, event -> handle(msg, partition, offset, nextTry, nextDelaySeconds));
+                        vertx.setTimer(delaySeconds * 1000, event -> handle(msg, partition, offset, nextTry, nextDelaySeconds, inProgressMessage));
                     }
 
                 } else {
@@ -256,6 +273,7 @@ class KafkaConsumerManager {
                             result.cause());
                     unacknowledgedOffsets.remove(offset);
                     phaser.arriveAndDeregister();
+                    inProgressMessage.finished();
                 }
             }
         });
@@ -282,7 +300,7 @@ class KafkaConsumerManager {
                     } catch (InterruptedException e1) {
                         LOG.error("{}: Interrupted while waiting for retry", configuration.getKafkaTopic(), e1);
                     }
-                    handle(msg, partition, offset, nextTry, nextDelaySeconds);
+                    handle(msg, partition, offset, nextTry, nextDelaySeconds, inProgressMessage);
                 }
             } catch (TimeoutException e) {
                 LOG.error("{}: Waited for {} strict ACKs for longer than {} seconds, not making any progress", new Object[]{

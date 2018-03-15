@@ -19,6 +19,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.hubrick.vertx.kafka.consumer.config.KafkaConsumerConfiguration;
 import com.hubrick.vertx.kafka.consumer.property.KafkaConsumerProperties;
+import com.hubrick.vertx.kafka.consumer.util.PrometheusMetrics;
 import com.hubrick.vertx.kafka.consumer.util.ThreadFactoryUtil;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -63,10 +64,14 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
 
         final String clientIdPrefix = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_CLIENT_ID);
 
+        final String topic = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC);
+        final String consumerGroup = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID);
+        final long instanceId = INSTANCE_COUNTER.getAndIncrement();
+
         final KafkaConsumerConfiguration configuration = KafkaConsumerConfiguration.create(
-                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID),
-                clientIdPrefix + "-" + INSTANCE_COUNTER.getAndIncrement(),
-                getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC),
+                consumerGroup,
+                clientIdPrefix + "-" + instanceId,
+                topic,
                 getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_BOOTSTRAP_SERVERS),
                 config.getString(KafkaConsumerProperties.KEY_OFFSET_RESET, "latest"),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_UNACKNOWLEDGED, 100),
@@ -85,18 +90,23 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
         );
 
-        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+        final PrometheusMetrics prometheusMetrics = PrometheusMetrics.create(topic, consumerGroup, instanceId);
+
+        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture, prometheusMetrics));
     }
+
+
 
     private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration,
                                            final String vertxAddress,
-                                           final Future<Void> startedFuture) {
+                                           final Future<Void> startedFuture,
+                                           final PrometheusMetrics prometheusMetrics) {
         try {
-            final java.util.concurrent.Future<?> future = startConsumerManager(configuration, vertxAddress, startedFuture);
+            final java.util.concurrent.Future<?> future = startConsumerManager(configuration, vertxAddress, startedFuture, prometheusMetrics);
             future.get();
             LOG.info("{}: Consumer manager run loop has returned, restarting", configuration.getKafkaTopic());
             stopConsumerManager();
-            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture, prometheusMetrics));
         } catch (InterruptedException e) {
             LOG.info("{}: ConsumerManager got interrupted, returning", configuration.getKafkaTopic());
             stopConsumerManager();
@@ -104,11 +114,11 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
         } catch (ExecutionException e) {
             LOG.warn("{}: ExecutionException in consumer manager, restarting", configuration.getKafkaTopic(), e);
             stopConsumerManager();
-            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture, prometheusMetrics));
         } catch (RetriableException e) {
             LOG.warn("{}: RetriableException in consumer manager, restarting", configuration.getKafkaTopic(), e);
             stopConsumerManager();
-            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture));
+            watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture, prometheusMetrics));
         } catch (KafkaException e) {
             LOG.error("{}: KafkaException in consumer manager, returning", configuration.getKafkaTopic(), e);
             stopConsumerManager();
@@ -119,8 +129,9 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
 
     private java.util.concurrent.Future<?> startConsumerManager(final KafkaConsumerConfiguration configuration,
                                                                 final String vertxAddress,
-                                                                final Future<Void> startedFuture) {
-        consumer = KafkaConsumerManager.create(vertx, configuration, makeHandler(configuration, vertxAddress));
+                                                                final Future<Void> startedFuture,
+                                                                final PrometheusMetrics prometheusMetrics) {
+        consumer = KafkaConsumerManager.create(vertx, configuration, prometheusMetrics, makeHandler(configuration, vertxAddress));
         return consumer.start(startedFuture);
     }
 
