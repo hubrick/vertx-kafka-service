@@ -84,7 +84,7 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getLong(KafkaConsumerProperties.KEY_EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
                 config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D),
                 config.getBoolean(KafkaConsumerProperties.KEY_COMMIT_ON_PARTITION_CHANGE, true),
-                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, false),
+                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, true),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500),
                 COMMA_LIST_SPLITTER.splitToList(config.getString(KafkaConsumerProperties.KEY_METRIC_CONSUMER_CLASSES, "")),
                 config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")

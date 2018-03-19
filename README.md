@@ -38,7 +38,7 @@ This service allows to receive events published by other Vert.x verticles and se
 <dependency>
     <groupId>com.hubrick.vertx</groupId>
     <artifactId>vertx-kafka-service</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.8</version>
 </dependency>
 ```
 
@@ -67,7 +67,7 @@ Service id: com.hubrick.services.kafka-consumer
       "eventBusSendTimeout" : 30,
       "messagesPerSecond" : -1.0,
       "commitOnPartitionChange": true,
-      "strictOrdering": false,
+      "strictOrdering": true,
       "maxPollRecords": 500
     }
 ```
@@ -88,7 +88,7 @@ Service id: com.hubrick.services.kafka-consumer
 * `eventBusSendTimeout`: the send timeout for the messages that are relayed to the Vertx Event Bus. That is the time the handler has to handle and respond to the message.`
 * `messagesPerSecond`: the number of messages that should be relayed per second (Double, values bigger than 0.0 will limit, everything else is unlimitted)
 * `commitOnPartitionChange`: Run a commit cycle when the partition changes. This is mostly another trigger if you do not have that many messages on a topic and want to make sure a commit happens regularly. (Default: true)
-* `strictOrdering`: Makes the consumer await an acknowledgement before relaying the next message. Messages will thus not be handled in parallel anymore but strictly in the order of arrival. (Default: false)
+* `strictOrdering`: Makes the consumer await an acknowledgement before relaying the next message. Messages will thus not be handled in parallel anymore but strictly in the order of arrival. (Default: true)
 * `maxPollRecords`: Number of messages that are taken from a Kafka Topic with a single poll call. You should be able to handle this number of messages in less than `max.poll.interval.ms` (5 minutes), otherwise it might happen that Kafka marks your consumer as 
 down during a commit cycle that takes longer. 
 
