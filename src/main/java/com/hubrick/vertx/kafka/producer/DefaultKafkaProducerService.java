@@ -23,6 +23,8 @@ import com.hubrick.vertx.kafka.producer.model.StringKafkaMessage;
 import com.timgroup.statsd.NoOpStatsDClient;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
+import io.prometheus.client.Counter;
+import io.prometheus.client.Histogram;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -44,6 +46,25 @@ import java.util.Map;
  * @since 1.0.0
  */
 public class DefaultKafkaProducerService implements KafkaProducerService {
+
+    private final static Counter MESSAGE_ERRORS = Counter.build()
+            .name("kafka_producer_messages_error_total")
+            .help("Total invalid messages")
+            .register();
+
+    private final static Counter MESSAGE_INVALID = Counter.build()
+            .name("kafka_producer_messages_invalid_total")
+            .help("Total invalid messages")
+            .register();
+
+
+    private final static Histogram DURATION_HISTOGRAM = Histogram.build()
+            .name("kafka_producer_messages_duration_seconds")
+            .help("Message processing duration in seconds")
+            .labelNames("topic", "state")
+            .buckets(0.01D, 0.025D, 0.05D, 0.075D, 0.1D, 0.25D, 0.5D, 0.75D, 1D, 2.5D, 5D, 7.5D, 9.99D)
+            .register();
+
 
     private static final Logger log = LoggerFactory.getLogger(DefaultKafkaProducerService.class);
 
@@ -77,6 +98,7 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
     public void sendString(StringKafkaMessage message, KafkaOptions options, Handler<AsyncResult<Void>> resultHandler) {
         if (!isValid(message.getPayload())) {
             log.error("Invalid kafka message provided. Message not sent to kafka...");
+            MESSAGE_INVALID.inc();
             sendError(resultHandler, new IllegalStateException(String.format("Invalid kafka message provided. Property [%s] is not set.", AbstractKafkaMessage.PAYLOAD)));
             return;
         }
@@ -88,6 +110,7 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
     public void sendBytes(ByteKafkaMessage message, KafkaOptions options, Handler<AsyncResult<Void>> resultHandler) {
         if (!isValid(message.getPayload())) {
             log.error("Invalid kafka message provided. Message not sent to kafka...");
+            MESSAGE_INVALID.inc();
             sendError(resultHandler, new IllegalStateException(String.format("Invalid kafka message provided. Property [%s] is not set.", AbstractKafkaMessage.PAYLOAD)));
             return;
         }
@@ -97,13 +120,14 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
 
     private void send(MessageSerializerType messageSerializerType, Object payload, String partKey, KafkaOptions options, Handler<AsyncResult<Void>> resultHandler) {
         try {
+            long startTime = System.currentTimeMillis();
             final String topic = isValid(options.getTopic()) ? options.getTopic() : kafkaProducerConfiguration.getDefaultTopic();
 
-            long startTime = System.currentTimeMillis();
             final Producer producer = getOrCreateProducer(messageSerializerType);
             producer.send(new ProducerRecord(topic, partKey, payload), (metadata, exception) -> {
                 if (exception != null) {
                     log.error("Failed to send message to Kafka broker...", exception);
+                    DURATION_HISTOGRAM.labels(topic, "error").observe(System.currentTimeMillis() - startTime / 1000D);
                     sendError(resultHandler, exception);
                 }
 
@@ -111,12 +135,14 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
                     statsDClient.recordExecutionTime("submitted", (System.currentTimeMillis() - startTime));
 
                     sendOK(resultHandler);
+                    DURATION_HISTOGRAM.labels(topic, "success").observe(System.currentTimeMillis() - startTime / 1000D);
                     log.info("Message sent to kafka topic: {}. Payload: {}", topic, payload);
                 }
             } );
         } catch (Throwable t) {
             log.error("Failed to send message to Kafka broker...", t);
             sendError(resultHandler, t);
+            MESSAGE_ERRORS.inc();
         }
     }
 

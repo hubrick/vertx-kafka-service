@@ -41,7 +41,7 @@ public class PrometheusMetrics {
             .name("kafka_consumer_verticle_messages_processing_duration_seconds")
             .help("Message processing duration in seconds")
             .labelNames("topic", "consumerGroup", "instanceId")
-            .buckets(0.01D, 0.025D, 0.05D, 0.075D, 0.1D, 0.25D, 0.5D, 0.75D, 1D, 2.5D, 5D, 7.5D, 10D)
+            .buckets(0.01D, 0.025D, 0.05D, 0.075D, 0.1D, 0.25D, 0.5D, 0.75D, 1D, 2.5D, 5D, 7.5D, 9.99D)
             .register();
 
     private final String topic;
