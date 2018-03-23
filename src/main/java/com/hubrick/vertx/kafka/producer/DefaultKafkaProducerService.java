@@ -127,7 +127,7 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
             producer.send(new ProducerRecord(topic, partKey, payload), (metadata, exception) -> {
                 if (exception != null) {
                     log.error("Failed to send message to Kafka broker...", exception);
-                    DURATION_HISTOGRAM.labels(topic, "error").observe(System.currentTimeMillis() - startTime / 1000D);
+                    DURATION_HISTOGRAM.labels(topic, "error").observe((System.currentTimeMillis() - startTime) / 1000D);
                     sendError(resultHandler, exception);
                 }
 
@@ -135,7 +135,7 @@ public class DefaultKafkaProducerService implements KafkaProducerService {
                     statsDClient.recordExecutionTime("submitted", (System.currentTimeMillis() - startTime));
 
                     sendOK(resultHandler);
-                    DURATION_HISTOGRAM.labels(topic, "success").observe(System.currentTimeMillis() - startTime / 1000D);
+                    DURATION_HISTOGRAM.labels(topic, "success").observe((System.currentTimeMillis() - startTime) / 1000D);
                     log.info("Message sent to kafka topic: {}. Payload: {}", topic, payload);
                 }
             } );
