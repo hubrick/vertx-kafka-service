@@ -16,7 +16,7 @@ This service allows you to bridge messages from Kafka to the Vert.x Event Bus. I
 
 It achieves "at-least-once" semantics, all Event Bus messages must be acknowledged by the handler in order to commit the current Kafka offset. This means that your handler on the Event Bus must be able to handle message replays.
 
-The ordering is in so far preserved as the messages are relayed to the Vert.x EventBus in the order of arrival. If certain actions take longer than others the order will get violated, because the consumer does not wait for the ACKs before relaying the next message. To ensure strict ordering enable `strictOrdering`.
+There are two ways to use the service, one is `strictOdering` set to `true`, which is the default, which strictly relays the messages to the Vert.x EventBus in the order of arrival and awaits an ACK. The other one is setting `strictOrdering` to `false` and limitting the amount of parallel messages with `messagesPerSecond` in order to avoid overload of your Vert.x application. 
 
 When certain limits are reached a commit cycle will happen. A commit cycle waits for all outstanding acknowledgements in order to commit the current Kafka offset. You have to be able to fulfill the commit cycle in less than what is configured as `max.poll.interval.ms` (5 minutes is the default), otherwise you have to reduce the number of records that are handled at a given time (`maxPollRecords`)
 
@@ -38,7 +38,7 @@ This service allows to receive events published by other Vert.x verticles and se
 <dependency>
     <groupId>com.hubrick.vertx</groupId>
     <artifactId>vertx-kafka-service</artifactId>
-    <version>1.2.8</version>
+    <version>1.2.10</version>
 </dependency>
 ```
 
