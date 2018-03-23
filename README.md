@@ -38,7 +38,7 @@ This service allows to receive events published by other Vert.x verticles and se
 <dependency>
     <groupId>com.hubrick.vertx</groupId>
     <artifactId>vertx-kafka-service</artifactId>
-    <version>1.2.10</version>
+    <version>1.2.11</version>
 </dependency>
 ```
 
