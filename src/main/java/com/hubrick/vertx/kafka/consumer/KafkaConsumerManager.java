@@ -97,7 +97,7 @@ class KafkaConsumerManager {
                     Optional.of(RateLimiter.create(configuration.getMessagesPerSecond())) : Optional.empty();
         this.prometheusMetrics = prometheusMetrics;
 
-        LOG.info("Started Kafka Consumer Manager with the following configuration: {}", this.configuration);
+        LOG.info("Created Kafka Consumer Manager with the following configuration: {}", this.configuration);
     }
 
     public static KafkaConsumerManager create(final Vertx vertx,
