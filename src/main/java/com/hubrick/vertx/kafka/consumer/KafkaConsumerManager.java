@@ -79,7 +79,7 @@ class KafkaConsumerManager {
     private final AtomicLong currentPartition = new AtomicLong(-1);
     private final AtomicLong lastCommitTime = new AtomicLong(System.currentTimeMillis());
     private final Optional<RateLimiter> rateLimiter;
-    private PrometheusMetrics prometheusMetrics;
+    private final PrometheusMetrics prometheusMetrics;
     private final AtomicBoolean waiting = new AtomicBoolean(false);
     private final AtomicInteger lastPhase = new AtomicInteger(-1);
     private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
