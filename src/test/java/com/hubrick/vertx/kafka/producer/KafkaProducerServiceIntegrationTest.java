@@ -149,7 +149,7 @@ public class KafkaProducerServiceIntegrationTest extends AbstractProducerTest {
     }
 
     private KafkaServer startKafkaServer() {
-        Properties props = TestUtils.createBrokerConfig(0, zookeeper.getConnectString(), true, true, 9092, Option.<SecurityProtocol>empty(), Option.<File>empty(), Option.<Properties>empty(), true, false, 0, false, 0, false, 0, Option.<String>empty(), 0);
+        Properties props = TestUtils.createBrokerConfig(0, zookeeper.getConnectString(), true, true, 9092, Option.<SecurityProtocol>empty(), Option.<File>empty(), Option.<Properties>empty(), true, false, 0, false, 0, false, 0, Option.<String>empty(), 0, false);
         props.put(KafkaConfig.ZkConnectProp(), zookeeper.getConnectString());
         kafkaServer = TestUtils.createServer(new KafkaConfig(props), new kafka.utils.MockTime());
         return kafkaServer;
