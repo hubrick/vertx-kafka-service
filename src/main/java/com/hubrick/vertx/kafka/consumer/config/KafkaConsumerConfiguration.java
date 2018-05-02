@@ -45,6 +45,7 @@ public class KafkaConsumerConfiguration {
     private final boolean commitOnPartitionChange;
     private final boolean strictOrderingEnabled;
     private final int maxPollRecords;
+    private final long maxPollIntervalMs;
     private final List<String> metricConsumerClasses;
     private final String metricDropwizardRegistryName;
 
@@ -65,6 +66,7 @@ public class KafkaConsumerConfiguration {
                                        final boolean commitOnPartitionChange,
                                        final boolean strictOrderingEnabled,
                                        final int maxPollRecords,
+                                       final long maxPollIntervalMs,
                                        final List<String> metricConsumerClasses,
                                        final String metricDropwizardRegistryName) {
         this.clientId = clientId;
@@ -84,6 +86,7 @@ public class KafkaConsumerConfiguration {
         this.commitOnPartitionChange = commitOnPartitionChange;
         this.strictOrderingEnabled = strictOrderingEnabled;
         this.maxPollRecords = maxPollRecords;
+        this.maxPollIntervalMs = maxPollIntervalMs;
         this.metricConsumerClasses = ImmutableList.copyOf(metricConsumerClasses);
         this.metricDropwizardRegistryName = metricDropwizardRegistryName;
     }
@@ -105,6 +108,7 @@ public class KafkaConsumerConfiguration {
                                                     final boolean commitOnPartitionChange,
                                                     final boolean strictOrderingEnabled,
                                                     final int maxPollRecords,
+                                                    final long maxPollIntervalMs,
                                                     final List<String> metricConsumerClasses,
                                                     final String metricDropwizardRegistryName) {
         return new KafkaConsumerConfiguration(
@@ -125,6 +129,7 @@ public class KafkaConsumerConfiguration {
                 commitOnPartitionChange,
                 strictOrderingEnabled,
                 maxPollRecords,
+                maxPollIntervalMs,
                 metricConsumerClasses,
                 metricDropwizardRegistryName);
     }
@@ -197,6 +202,10 @@ public class KafkaConsumerConfiguration {
         return maxPollRecords;
     }
 
+    public long getMaxPollIntervalMs() {
+        return maxPollIntervalMs;
+    }
+
     public List<String> getMetricConsumerClasses() {
         return metricConsumerClasses;
     }
@@ -225,6 +234,7 @@ public class KafkaConsumerConfiguration {
                 .add("commitOnPartitionChange", commitOnPartitionChange)
                 .add("strictOrderingEnabled", strictOrderingEnabled)
                 .add("maxPollRecords", maxPollRecords)
+                .add("maxPollIntervalMs", maxPollIntervalMs)
                 .add("metricConsumerClasses", metricConsumerClasses)
                 .add("metricDropwizardRegistryName", metricDropwizardRegistryName)
                 .toString();

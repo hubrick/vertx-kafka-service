@@ -118,6 +118,7 @@ class KafkaConsumerManager {
         properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Boolean.FALSE.toString());
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configuration.getOffsetReset());
         properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(configuration.getMaxPollRecords()));
+        properties.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, String.valueOf(configuration.getMaxPollIntervalMs()));
         properties.put(ConsumerConfig.METRIC_REPORTER_CLASSES_CONFIG, configuration.getMetricConsumerClasses());
         properties.put("metric.dropwizard.registry", String.valueOf(configuration.getMetricDropwizardRegistryName()));
 

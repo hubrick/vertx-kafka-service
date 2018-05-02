@@ -59,7 +59,7 @@ Service id: com.hubrick.services.kafka-consumer
       "offsetReset" : "largest",
       "maxUnacknowledged" : 100,
       "maxUncommitted" : 1000,
-      "ackTimeoutSeconds" : 600,
+      "ackTimeoutSeconds" : 240,
       "commitTimeoutMs" : 300000, 
       "maxRetries" : 100,
       "initialRetryDelaySeconds" : 1,
@@ -80,7 +80,7 @@ Service id: com.hubrick.services.kafka-consumer
 * `offsetReset`: What to do when there is no initial offset in ZooKeeper or if an offset is out of range (Default: largest)
 * `maxUnacknowledged`: how many messages from Kafka can be unacknowledged before the module waits for all missing acknowledgements, effectively limiting the amount of messages that are on the Vertx Event Bus at any given time. (Default: 100)
 * `maxUncommitted`: max offset difference before a commit cycle is run. A commit cycle waits for all unacknowledged messages and then commits the offset to Kafka. Note that when you read from multiple partitions the offset is not continuous and therefore every partition switch causes a commit cycle. For better performance you should start an instance of the module per partition. (Default: 1000)
-* `ackTimeoutSeconds`: the time to wait for all outstanding acknowledgements during a commit cycle. This will just lead to a log message saying how many ACKs are still missing, as the module will wait forever for ACKs in order to achieve at least once semantics. (Default: 600)
+* `ackTimeoutSeconds`: the time to wait for all outstanding acknowledgements during a commit cycle. This will just lead to a log message saying how many ACKs are still missing, as the module will wait forever for ACKs in order to achieve at least once semantics. (Default: 240)
 * `commitTimeoutMs`: the time to wait to force a commit cycle in case there is not a lot of traffic on your topic. It will check if between and the last message the timeout has been passed and will commit if so. 
 * `maxRetries`: Max number of retries until it consider the message failed (Default: infinite)
 * `initialRetryDelaySeconds`: Initial retry delay (Default: 1)
@@ -89,8 +89,8 @@ Service id: com.hubrick.services.kafka-consumer
 * `messagesPerSecond`: the number of messages that should be relayed per second (Double, values bigger than 0.0 will limit, everything else is unlimitted)
 * `commitOnPartitionChange`: Run a commit cycle when the partition changes. This is mostly another trigger if you do not have that many messages on a topic and want to make sure a commit happens regularly. (Default: true)
 * `strictOrdering`: Makes the consumer await an acknowledgement before relaying the next message. Messages will thus not be handled in parallel anymore but strictly in the order of arrival. (Default: true)
-* `maxPollRecords`: Number of messages that are taken from a Kafka Topic with a single poll call. You should be able to handle this number of messages in less than `max.poll.interval.ms` (5 minutes), otherwise it might happen that Kafka marks your consumer as 
-down during a commit cycle that takes longer. 
+* `maxPollRecords`: Number of messages that are taken from a Kafka Topic with a single poll call. You should be able to handle this number of messages in less than `maxPollIntervalMs`, otherwise it might happen that Kafka marks your consumer as down during a commit cycle that takes longer. 
+* `maxPollIntervalMs`: Interval in ms that the consumer must ask for new messages from the topic. The default is 300000ms (5 minutes). 
 
 ### Example:
 
