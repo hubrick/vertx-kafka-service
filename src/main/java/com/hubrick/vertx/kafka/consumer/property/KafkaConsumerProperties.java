@@ -46,6 +46,7 @@ public final class KafkaConsumerProperties {
     public static final String KEY_COMMIT_ON_PARTITION_CHANGE = "commitOnPartitionChange";
     public static final String KEY_STRICT_ORDERING = "strictOrdering";
     public static final String KEY_MAX_POLL_RECORDS = "maxPollRecords";
+    public static final String KEY_MAX_POLL_INTERVAL_MS = "maxPollIntervalMs";
     public static final String KEY_METRIC_CONSUMER_CLASSES = "metricConsumerClasses";
     public static final String KEY_METRIC_DROPWIZARD_REGISTRY_NAME = "metricDropwizardRegistryName";
 

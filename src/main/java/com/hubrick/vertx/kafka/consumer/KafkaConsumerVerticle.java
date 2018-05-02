@@ -44,14 +44,11 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class KafkaConsumerVerticle extends AbstractVerticle {
 
+    static final Double NON_STRICT_ORDERING_MESSAGES_PER_SECOND_DEFAULT = 20D;
     private static final Logger LOG = LoggerFactory.getLogger(KafkaConsumerVerticle.class);
-
     private static final AtomicLong INSTANCE_COUNTER = new AtomicLong();
-
     private static final Splitter COMMA_LIST_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
-
     private static final ThreadFactory CONSUMER_WATCHER_THREAD = ThreadFactoryUtil.createThreadFactory("kafka-consumer-watcher-thread-%d", LOG);
-
     private ExecutorService watcherExecutor = Executors.newSingleThreadExecutor(CONSUMER_WATCHER_THREAD);
 
     private volatile KafkaConsumerManager consumer;
@@ -60,15 +57,49 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
     @Override
     public void start(final Future<Void> startedFuture) throws Exception {
         final JsonObject config = vertx.getOrCreateContext().config();
+        final long instanceId = INSTANCE_COUNTER.getAndIncrement();
         final String vertxAddress = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_VERTX_ADDRESS);
 
+        final KafkaConsumerConfiguration configuration = createKafkaConsumerConfiguration(config, instanceId);
+
+        final PrometheusMetrics prometheusMetrics = PrometheusMetrics.create(configuration.getKafkaTopic(), configuration.getGroupId(), instanceId);
+
+        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture, prometheusMetrics));
+    }
+
+    KafkaConsumerConfiguration createKafkaConsumerConfiguration(final JsonObject config, final long instanceId) {
         final String clientIdPrefix = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_CLIENT_ID);
 
         final String topic = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_KAFKA_TOPIC);
         final String consumerGroup = getMandatoryStringConfig(config, KafkaConsumerProperties.KEY_GROUP_ID);
-        final long instanceId = INSTANCE_COUNTER.getAndIncrement();
 
-        final KafkaConsumerConfiguration configuration = KafkaConsumerConfiguration.create(
+        final Boolean strictOrderingEnabled = config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, true);
+
+        final Double messagesPerSecond = config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D);
+        final Integer maxPollRecords = config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500);
+        final Long maxPollIntervalMs = config.getLong(KafkaConsumerProperties.KEY_MAX_POLL_INTERVAL_MS, 300000L);
+        final double maxPollIntervalSeconds = maxPollIntervalMs / 1000D;
+
+        final Double effectiveMessagesPerSecond;
+        if ((!strictOrderingEnabled) && messagesPerSecond < 0D) {
+            effectiveMessagesPerSecond = NON_STRICT_ORDERING_MESSAGES_PER_SECOND_DEFAULT;
+            LOG.warn("Strict ordering is disabled but no message limit given, limiting to {}", effectiveMessagesPerSecond);
+        } else {
+            effectiveMessagesPerSecond = messagesPerSecond;
+        }
+
+        final long effectiveMaxPollIntervalMs;
+        if (effectiveMessagesPerSecond > 0D && effectiveMessagesPerSecond < (maxPollRecords / maxPollIntervalSeconds)) {
+            effectiveMaxPollIntervalMs = (long) Math.ceil(maxPollRecords / effectiveMessagesPerSecond * 1000) * 2;
+            LOG.warn("The configuration limits to handling {} messages per seconds, but number of polled records is {} that should be handled in {}ms." +
+                            " This will cause the consumer to be marked as dead if there are more messages on the topic than are handled per second." +
+                            " Setting the maxPollInterval to {}ms",
+                    effectiveMessagesPerSecond, maxPollRecords, maxPollIntervalMs, effectiveMaxPollIntervalMs);
+        } else {
+            effectiveMaxPollIntervalMs = maxPollIntervalMs;
+        }
+
+        return KafkaConsumerConfiguration.create(
                 consumerGroup,
                 clientIdPrefix + "-" + instanceId,
                 topic,
@@ -80,21 +111,17 @@ public class KafkaConsumerVerticle extends AbstractVerticle {
                 config.getLong(KafkaConsumerProperties.KEY_COMMIT_TIMEOUT_MS, 5 * 60 * 1000L),
                 config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRIES, Integer.MAX_VALUE),
                 config.getInteger(KafkaConsumerProperties.KEY_INITIAL_RETRY_DELAY_SECONDS, 1),
-                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 300),
+                config.getInteger(KafkaConsumerProperties.KEY_MAX_RETRY_DELAY_SECONDS, 10),
                 config.getLong(KafkaConsumerProperties.KEY_EVENT_BUS_SEND_TIMEOUT, DeliveryOptions.DEFAULT_TIMEOUT),
-                config.getDouble(KafkaConsumerProperties.KEY_MESSAGES_PER_SECOND, -1D),
+                effectiveMessagesPerSecond,
                 config.getBoolean(KafkaConsumerProperties.KEY_COMMIT_ON_PARTITION_CHANGE, true),
-                config.getBoolean(KafkaConsumerProperties.KEY_STRICT_ORDERING, true),
-                config.getInteger(KafkaConsumerProperties.KEY_MAX_POLL_RECORDS, 500),
+                strictOrderingEnabled,
+                maxPollRecords,
+                effectiveMaxPollIntervalMs,
                 COMMA_LIST_SPLITTER.splitToList(config.getString(KafkaConsumerProperties.KEY_METRIC_CONSUMER_CLASSES, "")),
                 config.getString(KafkaConsumerProperties.KEY_METRIC_DROPWIZARD_REGISTRY_NAME, "")
         );
-
-        final PrometheusMetrics prometheusMetrics = PrometheusMetrics.create(topic, consumerGroup, instanceId);
-
-        watcherExecutor.execute(() -> watchStartConsumerManager(configuration, vertxAddress, startedFuture, prometheusMetrics));
     }
-
 
 
     private void watchStartConsumerManager(final KafkaConsumerConfiguration configuration,
